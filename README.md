@@ -1,2 +1,2 @@
 # IBS-Care-App
-A Web App for IBS Analysis and Predictions.
+An EHR Launch Web App for IBS Analysis and Predictions.
