@@ -27,4 +27,5 @@ variable "ghcr_pat" {
   description = "GitHub Container Registry Personal Access Token"
   type        = string
   sensitive   = true
+  default     = ""  # Leave default empty
 }
