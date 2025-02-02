@@ -28,3 +28,4 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+ibs-care-app-deployment/terraform.tfvars
