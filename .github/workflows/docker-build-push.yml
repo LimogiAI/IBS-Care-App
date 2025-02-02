@@ -34,6 +34,11 @@ jobs:
             ghcr.io/limogiai/ibs-care-app:latest
             ghcr.io/limogiai/ibs-care-app:${{ github.sha }}
 
+      - name: 📦 Install Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.7  # Specify the desired version
+
       - name: 🔑 Add SSH Key
         run: |
           echo "${{ secrets.IBS_CARE_KEY }}" > ibs-care-key.pem
@@ -49,7 +54,6 @@ jobs:
           terraform init
           terraform apply -auto-approve
 
-          # Connect to EC2 and deploy the latest Docker image
           ssh -o StrictHostKeyChecking=no -i ibs-care-key.pem ubuntu@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
             sudo docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GHCR_PAT }}
             sudo docker pull ghcr.io/limogiai/ibs-care-app:latest
