@@ -23,12 +23,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_PAT }}
 
-      - name: 🐳 Build and Push Docker Image
+      - name: 🐳 Build and Push Docker Image (Multi-Arch)
         uses: docker/build-push-action@v4
         with:
           context: .
           file: ./Dockerfile
           push: true
+          platforms: linux/amd64,linux/arm64  # Add multi-platform support
           tags: |
             ghcr.io/limogiai/ibs-care-app:latest
             ghcr.io/limogiai/ibs-care-app:${{ github.sha }}
