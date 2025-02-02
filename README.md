@@ -1,55 +1,160 @@
-<<<<<<< Updated upstream
 # IBS-Care-App
+
 An EHR Launch Web App for IBS Analysis and Predictions.
-=======
-# React + TypeScript + Vite
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## 🚀 Technologies Used
+- **React** + **TypeScript** + **Vite**
+- **Bun** (Package Manager & Build Tool)
+- **MUI (Material UI)** for UI Components
+- **OIDC-Client-TS** for Authentication
+- **Recharts** for Data Visualization
+- **Docker** & **GitHub Actions** for CI/CD
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
-
-- Configure the top-level `parserOptions` property like this:
-
-```js
-export default tseslint.config({
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+## 📦 Project Structure
+```
+IBS-Care-App/
+├── public/
+├── src/
+│   ├── components/
+│   ├── services/
+│   └── utils/
+├── Dockerfile
+├── docker-compose.yml
+├── package.json
+├── bun.lockb
+└── vite.config.ts
 ```
 
-- Replace `tseslint.configs.recommended` to `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`
-- Optionally add `...tseslint.configs.stylisticTypeChecked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and update the config:
+---
 
-```js
-// eslint.config.js
-import react from 'eslint-plugin-react'
+## ⚙️ Local Development
 
-export default tseslint.config({
-  // Set the react version
-  settings: { react: { version: '18.3' } },
-  plugins: {
-    // Add the react plugin
-    react,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended rules
-    ...react.configs.recommended.rules,
-    ...react.configs['jsx-runtime'].rules,
-  },
-})
+### 1️⃣ **Clone the Repository:**
+```bash
+git clone https://github.com/LimogiAI/IBS-Care-App.git
+cd IBS-Care-App
 ```
->>>>>>> Stashed changes
+
+### 2️⃣ **Install Dependencies:**
+```bash
+bun install
+```
+
+### 3️⃣ **Run the App Locally:**
+```bash
+bun run dev
+```
+
+- The app will be running on: [http://localhost:4434](http://localhost:4434)
+
+### 4️⃣ **Build for Production:**
+```bash
+bun run build
+```
+
+---
+
+## 🐳 Docker Setup
+
+### **1. Build the Docker Image Locally:**
+```bash
+docker build -t ibs-care-app:latest .
+```
+
+### **2. Run with Docker Compose:**
+```bash
+docker-compose up -d
+```
+
+- Access the app at: [http://localhost:4434](http://localhost:4434)
+
+### **3. Docker Compose File:**
+```yaml
+version: '3.8'
+
+services:
+  ibs-care-app:
+    image: ghcr.io/limogiai/ibs-care-app:latest
+    ports:
+      - "4434:80"
+    restart: unless-stopped
+```
+
+---
+
+## 🔄 GitHub Actions CI/CD Pipeline
+
+### **Workflow:** `.github/workflows/docker-build-push.yml`
+
+- **Trigger:** On push to the `main` branch
+- **Steps:**
+  1. Checkout code
+  2. Build Docker image
+  3. Push to GitHub Container Registry (GHCR)
+
+### **Adding Secrets:**
+1. Go to your repository **Settings → Secrets → Actions → New Repository Secret**.
+2. Add a secret named `GHCR_PAT` with your GitHub Personal Access Token (PAT).
+
+### **Sample Workflow Configuration:**
+```yaml
+name: 🚀 Build and Push Docker Image
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v3
+
+      - name: 🔑 Set Up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: 🔐 Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_PAT }}
+
+      - name: 🐳 Build and Push Docker Image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ghcr.io/limogiai/ibs-care-app:latest
+            ghcr.io/limogiai/ibs-care-app:${{ github.sha }}
+
+      - name: ✅ Verify Image Pushed
+        run: echo "Docker image pushed successfully!"
+```
+
+---
+
+## 🤝 Contributing
+1. Fork the repository
+2. Create your feature branch: `git checkout -b feature/YourFeature`
+3. Commit your changes: `git commit -m 'Add new feature'`
+4. Push to the branch: `git push origin feature/YourFeature`
+5. Open a pull request
+
+---
+
+## 📄 License
+
+Licensed under the [Apache-2.0 License](./LICENSE).
+
+---
+
+**Made with ❤️ by LimogiAI Solutions Inc.**
+
