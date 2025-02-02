@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  build-and-push:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -29,27 +29,34 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          platforms: linux/amd64,linux/arm64  # Add multi-platform support
+          platforms: linux/amd64,linux/arm64
           tags: |
             ghcr.io/limogiai/ibs-care-app:latest
             ghcr.io/limogiai/ibs-care-app:${{ github.sha }}
 
+      - name: 🔑 Add SSH Key
+        run: |
+          echo "${{ secrets.IBS_CARE_KEY }}" > ibs-care-key.pem
+          chmod 600 ibs-care-key.pem
+
       - name: 🚀 Deploy EC2 with Terraform
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          GHCR_PAT: ${{ secrets.GHCR_PAT }}
         run: |
           cd ibs-care-app-deployment
           terraform init
           terraform apply -auto-approve
-          ssh -o StrictHostKeyChecking=no -i /path/to/ibs-care-key.pem ubuntu@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
+
+          # Connect to EC2 and deploy the latest Docker image
+          ssh -o StrictHostKeyChecking=no -i ibs-care-key.pem ubuntu@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
             sudo docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GHCR_PAT }}
             sudo docker pull ghcr.io/limogiai/ibs-care-app:latest
             sudo docker stop ibs-care-app || true
             sudo docker rm ibs-care-app || true
             sudo docker run -d --name ibs-care-app -p 4434:80 ghcr.io/limogiai/ibs-care-app:latest
           EOF
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          GHCR_PAT: ${{ secrets.GHCR_PAT }}
 
-      - name: ✅ Verify Image Pushed
-        run: echo "Docker image pushed successfully!"
+      - name: ✅ Verify Image Pushed and Deployed
+        run: echo "Docker image built, pushed, and deployed successfully!"
