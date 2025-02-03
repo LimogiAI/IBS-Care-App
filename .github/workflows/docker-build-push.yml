@@ -61,12 +61,17 @@ jobs:
           PUBLIC_IP=$(terraform output -raw public_ip)
 
           echo "Waiting for EC2 instance to initialize..."
-          sleep 60  # Wait for 60 seconds to allow EC2 to fully start
+          sleep 120  # Wait for 60 seconds to allow EC2 to fully start
 
-          # Correct SSH Port Availability Check
-          while ! nc -z -v $PUBLIC_IP 22; do
-            echo "SSH not ready yet. Retrying in 5 seconds..."
-            sleep 5
+          # Wait for SSH to become available
+          for i in {1..20}; do
+            if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 -i ibs-care-key.pem ubuntu@$PUBLIC_IP "echo 'SSH is ready'" &>/dev/null; then
+              echo "SSH is ready. Proceeding with deployment."
+              break
+            else
+              echo "SSH not ready yet. Retrying in 5 seconds..."
+              sleep 5
+            fi
           done
 
           echo "SSH is ready. Proceeding with deployment."
