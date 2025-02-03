@@ -50,11 +50,15 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           GHCR_PAT: ${{ secrets.GHCR_PAT }}
         run: |
+          export TF_LOG=DEBUG
+          export TF_LOG_PATH=terraform-debug.log
+
           cd ibs-care-app-deployment
           terraform init
           terraform apply -auto-approve
 
-          ssh -o StrictHostKeyChecking=no -i ibs-care-key.pem ubuntu@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
+          # Debug SSH
+          ssh -v -o StrictHostKeyChecking=no -i ibs-care-key.pem ubuntu@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
             sudo docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GHCR_PAT }}
             sudo docker pull ghcr.io/limogiai/ibs-care-app:latest
             sudo docker stop ibs-care-app || true
