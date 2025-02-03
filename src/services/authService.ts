@@ -4,7 +4,7 @@ import { UserManager, User } from "oidc-client-ts";
 // OIDC Configuration for MeldRx
 const userManager = new UserManager({
   authority: "https://app.meldrx.com",
-  client_id: "188cfb715ff947d9a7b8bacde5944d8b",
+  client_id: "b5de3fccab5046cc99ae551ddc2c774e",
   response_type: "code",
   redirect_uri: "https://ibscare-app.limogi.ai/callback",
   scope: "openid profile launch patient/*.read",
