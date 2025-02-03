@@ -45,30 +45,35 @@ jobs:
           chmod 600 ibs-care-key.pem
 
       - name: 🚀 Deploy EC2 with Terraform
+        id: deploy
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           GHCR_PAT: ${{ secrets.GHCR_PAT }}
+          GITHUB_ACTOR: ${{ github.actor }}
         run: |
           cd ibs-care-app-deployment
           terraform init
           terraform apply -auto-approve
           
-          # Get the public IP and store it
-          export PUBLIC_IP=$(terraform output -raw public_ip)
+          # Capture only the raw public IP (suppressing any extra debug output)
+          PUBLIC_IP=$(terraform output -raw public_ip 2>/dev/null | head -n 1)
           echo "EC2 Public IP: ${PUBLIC_IP}"
           
-          # Wait for 2 minutes to allow EC2 instance to initialize
-          echo "Waiting for 2 minutes to allow EC2 instance to initialize..."
+          # Set the public IP as an output for later steps
+          echo "public_ip=${PUBLIC_IP}" >> $GITHUB_OUTPUT
+          
+          # Wait to allow the EC2 instance to fully initialize
+          echo "Waiting for 3 minutes to allow EC2 instance to initialize..."
           sleep 180
           
           echo "Starting SSH availability check..."
-          # Verify SSH key is in place
+          # Verify the SSH key is present (using relative path since we've cd'd)
           ls -la ../ibs-care-key.pem
           
-          # Test SSH connection
+          # Attempt to establish an SSH connection, retrying up to 20 times
           for i in {1..20}; do
-            if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 -i ../ibs-care-key.pem "ubuntu@$PUBLIC_IP" "echo 'SSH connection successful'"; then
+            if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 -i ../ibs-care-key.pem "ubuntu@${PUBLIC_IP}" "echo 'SSH connection successful'"; then
               echo "SSH connection established"
               break
             fi
@@ -80,37 +85,37 @@ jobs:
             sleep 5
           done
           
-          # Deploy application
+          # Deploy the application on the EC2 instance via SSH
           echo "Starting deployment..."
-          ssh -o StrictHostKeyChecking=no -i ../ibs-care-key.pem "ubuntu@$PUBLIC_IP" /bin/bash << EOF
+          ssh -o StrictHostKeyChecking=no -i ../ibs-care-key.pem "ubuntu@${PUBLIC_IP}" /bin/bash <<EOF
             # Update package list
             sudo apt-get update
             
             # Login to Docker
             echo "Logging into Docker..."
-            sudo docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GHCR_PAT }}
+            sudo docker login ghcr.io -u ${GITHUB_ACTOR} -p ${GHCR_PAT}
             
             # Pull the latest image
             echo "Pulling latest image..."
             sudo docker pull ghcr.io/limogiai/ibs-care-app:latest
             
-            # Stop and remove existing container
+            # Stop and remove any existing container
             echo "Cleaning up existing container..."
             sudo docker stop ibs-care-app || true
             sudo docker rm ibs-care-app || true
             
-            # Run new container
+            # Run the new container
             echo "Starting new container..."
             sudo docker run -d --name ibs-care-app -p 4434:80 ghcr.io/limogiai/ibs-care-app:latest
             
-            # Verify container is running
+            # Verify the container is running
             echo "Verifying deployment..."
             sudo docker ps | grep ibs-care-app
             EOF
 
       - name: ✅ Verify Deployment
         run: |
-          echo "Deployment completed. Application URL: http://${PUBLIC_IP}:4434"
+          echo "Deployment completed. Application URL: http://${{ steps.deploy.outputs.public_ip }}:4434"
 
       - name: 🧹 Cleanup
         if: always()
