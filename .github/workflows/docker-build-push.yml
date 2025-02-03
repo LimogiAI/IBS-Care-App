@@ -44,7 +44,6 @@ jobs:
           echo "${{ secrets.IBS_CARE_KEY }}" > ibs-care-key.pem
           chmod 600 ibs-care-key.pem
           ls -l ibs-care-key.pem  # Verify the key exists
-
       - name: 🚀 Deploy EC2 with Terraform
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -64,22 +63,21 @@ jobs:
           echo "Waiting for EC2 instance to initialize..."
           sleep 60  # Wait for 60 seconds to allow EC2 to fully start
 
-          # Wait for SSH port to be accessible
-          while ! nc -z $PUBLIC_IP 22; do
-          echo "SSH not ready yet. Retrying in 5 seconds..."
-          sleep 5
+          # Correct SSH Port Availability Check
+          while ! nc -z -v $PUBLIC_IP 22; do
+            echo "SSH not ready yet. Retrying in 5 seconds..."
+            sleep 5
           done
 
           echo "SSH is ready. Proceeding with deployment."
 
-          # Debug SSH
-          ssh -v -o StrictHostKeyChecking=no -i ibs-care-key.pem ubuntu@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
+          # Deploy Docker container on EC2
+          ssh -o StrictHostKeyChecking=no -i ibs-care-key.pem ubuntu@$PUBLIC_IP << 'EOF'
             sudo docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GHCR_PAT }}
             sudo docker pull ghcr.io/limogiai/ibs-care-app:latest
             sudo docker stop ibs-care-app || true
             sudo docker rm ibs-care-app || true
             sudo docker run -d --name ibs-care-app -p 4434:80 ghcr.io/limogiai/ibs-care-app:latest
           EOF
-
       - name: ✅ Verify Image Pushed and Deployed
         run: echo "Docker image built, pushed, and deployed successfully!"
