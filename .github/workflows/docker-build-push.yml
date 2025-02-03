@@ -56,8 +56,8 @@ jobs:
           terraform init
           terraform apply -auto-approve
           
-          # Capture only the raw public IP (suppressing any extra debug output)
-          PUBLIC_IP=$(terraform output -raw public_ip 2>/dev/null | head -n 1)
+          # Capture only the raw public IP using JSON output and jq
+          PUBLIC_IP=$(terraform output -json public_ip | jq -r .)
           echo "EC2 Public IP: ${PUBLIC_IP}"
           
           # Set the public IP as an output for later steps
