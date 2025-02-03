@@ -41,10 +41,8 @@ jobs:
 
       - name: 🔑 Add SSH Key
         run: |
-          pwd  # Debug: Print current directory
-          echo "${{ secrets.IBS_CARE_KEY }}" > ./ibs-care-key.pem
-          chmod 600 ./ibs-care-key.pem
-          ls -la ./ibs-care-key.pem  # Verify the key exists and has correct permissions
+          echo "${{ secrets.IBS_CARE_KEY }}" > ibs-care-key.pem
+          chmod 600 ibs-care-key.pem
 
       - name: 🚀 Deploy EC2 with Terraform
         env:
@@ -52,67 +50,69 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           GHCR_PAT: ${{ secrets.GHCR_PAT }}
         run: |
-          # Debug: Print working directory
-          pwd
-          ls -la
-          
           cd ibs-care-app-deployment
           terraform init
           terraform apply -auto-approve
           
-          # Get and verify the public IP
-          PUBLIC_IP=$(terraform output -raw public_ip)
-          echo "Public IP: ${PUBLIC_IP}"
+          # Get the public IP and store it
+          export PUBLIC_IP=$(terraform output -raw public_ip)
+          echo "EC2 Public IP: ${PUBLIC_IP}"
           
-          # Debug: Check if key file is still accessible
-          ls -la ../ibs-care-key.pem
-          
-          # Wait for 2 minutes to allow EC2 instance to fully initialize
+          # Wait for 2 minutes to allow EC2 instance to initialize
           echo "Waiting for 2 minutes to allow EC2 instance to initialize..."
-          sleep 120
+          sleep 180
           
           echo "Starting SSH availability check..."
-          for i in {1..20}; do
-            if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 -i ../ibs-care-key.pem ubuntu@${PUBLIC_IP} "echo 'SSH is ready'" &>/dev/null; then
-              echo "SSH is ready. Proceeding with deployment."
-              break
-            else
-              echo "SSH not ready yet. Retrying in 5 seconds... (Attempt $i of 20)"
-              sleep 5
-            fi
-          done
-          
-          # After loop completes, verify key file again
+          # Verify SSH key is in place
           ls -la ../ibs-care-key.pem
           
-          # Deploy to EC2
-          ssh -o StrictHostKeyChecking=no -i ../ibs-care-key.pem ubuntu@${PUBLIC_IP} << 'EOSSH'
-            set -e
-            echo "Starting deployment on $(hostname)"
+          # Test SSH connection
+          for i in {1..20}; do
+            if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 -i ../ibs-care-key.pem "ubuntu@$PUBLIC_IP" "echo 'SSH connection successful'"; then
+              echo "SSH connection established"
+              break
+            fi
+            if [ $i -eq 20 ]; then
+              echo "Failed to establish SSH connection after 20 attempts"
+              exit 1
+            fi
+            echo "Attempt $i failed. Waiting 5 seconds before retry..."
+            sleep 5
+          done
+          
+          # Deploy application
+          echo "Starting deployment..."
+          ssh -o StrictHostKeyChecking=no -i ../ibs-care-key.pem "ubuntu@$PUBLIC_IP" /bin/bash << EOF
+            # Update package list
+            sudo apt-get update
             
-            # Docker login and deployment
+            # Login to Docker
+            echo "Logging into Docker..."
             sudo docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GHCR_PAT }}
+            
+            # Pull the latest image
+            echo "Pulling latest image..."
             sudo docker pull ghcr.io/limogiai/ibs-care-app:latest
             
-            # Stop and remove existing container if it exists
+            # Stop and remove existing container
+            echo "Cleaning up existing container..."
             sudo docker stop ibs-care-app || true
             sudo docker rm ibs-care-app || true
             
             # Run new container
+            echo "Starting new container..."
             sudo docker run -d --name ibs-care-app -p 4434:80 ghcr.io/limogiai/ibs-care-app:latest
             
             # Verify container is running
+            echo "Verifying deployment..."
             sudo docker ps | grep ibs-care-app
-            echo "Deployment completed successfully"
-          EOSSH
+            EOF
 
-      - name: ✅ Verify Image Pushed and Deployed
+      - name: ✅ Verify Deployment
         run: |
-          echo "Docker image built, pushed, and deployed successfully!"
-          echo "Application should be available at http://${PUBLIC_IP}:4434"
+          echo "Deployment completed. Application URL: http://${PUBLIC_IP}:4434"
 
       - name: 🧹 Cleanup
         if: always()
         run: |
-          rm -f ./ibs-care-key.pem
-          echo "Cleaned up sensitive files"
+          rm -f ibs-care-key.pem
