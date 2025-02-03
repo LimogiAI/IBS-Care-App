@@ -62,14 +62,18 @@ jobs:
           
           # Get and verify the public IP
           PUBLIC_IP=$(terraform output -raw public_ip)
-          echo "Public IP: $PUBLIC_IP"
+          echo "Public IP: ${PUBLIC_IP}"
           
           # Debug: Check if key file is still accessible
           ls -la ../ibs-care-key.pem
           
-          echo "Waiting for SSH to become available..."
+          # Wait for 2 minutes to allow EC2 instance to fully initialize
+          echo "Waiting for 2 minutes to allow EC2 instance to initialize..."
+          sleep 120
+          
+          echo "Starting SSH availability check..."
           for i in {1..20}; do
-            if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 -i ../ibs-care-key.pem "ubuntu@${PUBLIC_IP}" "echo 'SSH is ready'" &>/dev/null; then
+            if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 -i ../ibs-care-key.pem ubuntu@${PUBLIC_IP} "echo 'SSH is ready'" &>/dev/null; then
               echo "SSH is ready. Proceeding with deployment."
               break
             else
@@ -81,14 +85,34 @@ jobs:
           # After loop completes, verify key file again
           ls -la ../ibs-care-key.pem
           
-          # Use explicit path for key file in deployment
-          ssh -o StrictHostKeyChecking=no -i ../ibs-care-key.pem "ubuntu@${PUBLIC_IP}" << EOSSH
-            sudo docker login ghcr.io -u ${GITHUB_ACTOR} -p ${GHCR_PAT}
+          # Deploy to EC2
+          ssh -o StrictHostKeyChecking=no -i ../ibs-care-key.pem ubuntu@${PUBLIC_IP} << 'EOSSH'
+            set -e
+            echo "Starting deployment on $(hostname)"
+            
+            # Docker login and deployment
+            sudo docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GHCR_PAT }}
             sudo docker pull ghcr.io/limogiai/ibs-care-app:latest
+            
+            # Stop and remove existing container if it exists
             sudo docker stop ibs-care-app || true
             sudo docker rm ibs-care-app || true
+            
+            # Run new container
             sudo docker run -d --name ibs-care-app -p 4434:80 ghcr.io/limogiai/ibs-care-app:latest
+            
+            # Verify container is running
+            sudo docker ps | grep ibs-care-app
+            echo "Deployment completed successfully"
           EOSSH
 
       - name: ✅ Verify Image Pushed and Deployed
-        run: echo "Docker image built, pushed, and deployed successfully!"
+        run: |
+          echo "Docker image built, pushed, and deployed successfully!"
+          echo "Application should be available at http://${PUBLIC_IP}:4434"
+
+      - name: 🧹 Cleanup
+        if: always()
+        run: |
+          rm -f ./ibs-care-key.pem
+          echo "Cleaned up sensitive files"
