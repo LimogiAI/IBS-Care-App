@@ -8,7 +8,7 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-
+    
     steps:
       - name: 📥 Checkout Code
         uses: actions/checkout@v3
@@ -37,37 +37,39 @@ jobs:
       - name: 📦 Install Terraform
         uses: hashicorp/setup-terraform@v2
         with:
-          terraform_version: 1.5.7  # Specify the desired version
+          terraform_version: 1.5.7
 
       - name: 🔑 Add SSH Key
         run: |
           pwd  # Debug: Print current directory
           echo "${{ secrets.IBS_CARE_KEY }}" > ./ibs-care-key.pem
           chmod 600 ./ibs-care-key.pem
-          ls -la ./ibs-care-key.pem  # Verify the key exists and has correct permission
+          ls -la ./ibs-care-key.pem  # Verify the key exists and has correct permissions
+
       - name: 🚀 Deploy EC2 with Terraform
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           GHCR_PAT: ${{ secrets.GHCR_PAT }}
         run: |
-          export TF_LOG=DEBUG
-          export TF_LOG_PATH=terraform-debug.log
-
+          # Debug: Print working directory
+          pwd
+          ls -la
+          
           cd ibs-care-app-deployment
           terraform init
           terraform apply -auto-approve
-
-          # Retrieve public IP from Terraform output
+          
+          # Get and verify the public IP
           PUBLIC_IP=$(terraform output -raw public_ip)
           echo "Public IP: $PUBLIC_IP"
-
-          echo "Waiting for EC2 instance to initialize..."
-          sleep 120  # Wait for 60 seconds to allow EC2 to fully start
-
+          
+          # Debug: Check if key file is still accessible
+          ls -la ../ibs-care-key.pem
+          
           echo "Waiting for SSH to become available..."
           for i in {1..20}; do
-            if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 -i ./ibs-care-key.pem "ubuntu@${PUBLIC_IP}" "echo 'SSH is ready'" &>/dev/null; then
+            if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 -i ../ibs-care-key.pem "ubuntu@${PUBLIC_IP}" "echo 'SSH is ready'" &>/dev/null; then
               echo "SSH is ready. Proceeding with deployment."
               break
             else
@@ -76,15 +78,17 @@ jobs:
             fi
           done
           
-          echo "SSH is ready. Proceeding with deployment."
-
-          # Deploy Docker container on EC2
-          ssh -o StrictHostKeyChecking=no -i ibs-care-key.pem ubuntu@$PUBLIC_IP << 'EOF'
-            sudo docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GHCR_PAT }}
+          # After loop completes, verify key file again
+          ls -la ../ibs-care-key.pem
+          
+          # Use explicit path for key file in deployment
+          ssh -o StrictHostKeyChecking=no -i ../ibs-care-key.pem "ubuntu@${PUBLIC_IP}" << EOSSH
+            sudo docker login ghcr.io -u ${GITHUB_ACTOR} -p ${GHCR_PAT}
             sudo docker pull ghcr.io/limogiai/ibs-care-app:latest
             sudo docker stop ibs-care-app || true
             sudo docker rm ibs-care-app || true
             sudo docker run -d --name ibs-care-app -p 4434:80 ghcr.io/limogiai/ibs-care-app:latest
-          EOF
+          EOSSH
+
       - name: ✅ Verify Image Pushed and Deployed
         run: echo "Docker image built, pushed, and deployed successfully!"
