@@ -63,11 +63,11 @@ jobs:
           terraform init
           terraform apply -auto-approve || exit 1
           
-          # Extract the public IP from Terraform's output.
-          PUBLIC_IP=$(terraform output -raw public_ip | tr -d '\n')  # Ensure no extra newlines or spaces
+          # Extract the public IP from Terraform's JSON output (avoids debug logs)
+          PUBLIC_IP=$(terraform output -json public_ip | jq -r .)
           echo "EC2 Public IP: ${PUBLIC_IP}"
           
-          # Save the public IP as a step output for later use.
+          # Save the public IP as a step output
           echo "public_ip=${PUBLIC_IP}" >> $GITHUB_OUTPUT
           
           echo "Waiting for 5 minutes to allow the EC2 instance to initialize..."
@@ -76,7 +76,7 @@ jobs:
           echo "Starting SSH availability check..."
           ls -la ../ibs-care-key.pem
           
-          # Retry SSH connection up to 20 times.
+          # Retry SSH connection up to 20 times
           for i in {1..20}; do
             echo "Attempt $i: Trying to SSH into ${PUBLIC_IP}..."
             if ssh -v -o StrictHostKeyChecking=no -o ConnectTimeout=10 -i ../ibs-care-key.pem "ubuntu@${PUBLIC_IP}" "echo 'SSH connection successful'"; then
