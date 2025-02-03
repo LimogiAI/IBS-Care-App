@@ -43,6 +43,7 @@ jobs:
         run: |
           echo "${{ secrets.IBS_CARE_KEY }}" > ibs-care-key.pem
           chmod 600 ibs-care-key.pem
+          ls -l ibs-care-key.pem  # Verify the key exists
 
       - name: 🚀 Deploy EC2 with Terraform
         env:
@@ -56,6 +57,20 @@ jobs:
           cd ibs-care-app-deployment
           terraform init
           terraform apply -auto-approve
+
+          # Retrieve public IP from Terraform output
+          PUBLIC_IP=$(terraform output -raw public_ip)
+
+          echo "Waiting for EC2 instance to initialize..."
+          sleep 60  # Wait for 60 seconds to allow EC2 to fully start
+
+          # Wait for SSH port to be accessible
+          while ! nc -z $PUBLIC_IP 22; do
+          echo "SSH not ready yet. Retrying in 5 seconds..."
+          sleep 5
+          done
+
+          echo "SSH is ready. Proceeding with deployment."
 
           # Debug SSH
           ssh -v -o StrictHostKeyChecking=no -i ibs-care-key.pem ubuntu@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
