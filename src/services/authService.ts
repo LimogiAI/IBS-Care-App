@@ -6,7 +6,7 @@ const userManager = new UserManager({
   authority: "https://app.meldrx.com",
   client_id: "188cfb715ff947d9a7b8bacde5944d8b",
   response_type: "code",
-  redirect_uri: "http://localhost:4434/callback",
+  redirect_uri: "https://ibscare-app.limogi.ai/callback",
   scope: "openid profile launch patient/*.read",
 });
 
