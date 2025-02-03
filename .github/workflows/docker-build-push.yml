@@ -56,22 +56,22 @@ jobs:
           terraform init
           terraform apply -auto-approve
           
-          # Capture only the raw public IP using JSON output and jq
-          PUBLIC_IP=$(terraform output -json public_ip | jq -r .)
+          # Extract the public IP from Terraform's output using sed.
+          # This expects a line like: public_ip = "3.92.27.214"
+          PUBLIC_IP=$(terraform output public_ip | sed -n 's/^public_ip = "\(.*\)"$/\1/p')
           echo "EC2 Public IP: ${PUBLIC_IP}"
           
-          # Set the public IP as an output for later steps
+          # Save the public IP as a step output for later use.
           echo "public_ip=${PUBLIC_IP}" >> $GITHUB_OUTPUT
           
-          # Wait to allow the EC2 instance to fully initialize
-          echo "Waiting for 3 minutes to allow EC2 instance to initialize..."
+          echo "Waiting for 3 minutes to allow the EC2 instance to initialize..."
           sleep 180
           
           echo "Starting SSH availability check..."
-          # Verify the SSH key is present (using relative path since we've cd'd)
+          # Confirm the SSH key is in the expected location.
           ls -la ../ibs-care-key.pem
           
-          # Attempt to establish an SSH connection, retrying up to 20 times
+          # Retry SSH connection up to 20 times.
           for i in {1..20}; do
             if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 -i ../ibs-care-key.pem "ubuntu@${PUBLIC_IP}" "echo 'SSH connection successful'"; then
               echo "SSH connection established"
@@ -85,30 +85,29 @@ jobs:
             sleep 5
           done
           
-          # Deploy the application on the EC2 instance via SSH
-          echo "Starting deployment..."
-          ssh -o StrictHostKeyChecking=no -i ../ibs-care-key.pem "ubuntu@${PUBLIC_IP}" /bin/bash <<EOF
-            # Update package list
+          echo "Starting deployment on the EC2 instance..."
+          ssh -o StrictHostKeyChecking=no -i ../ibs-care-key.pem "ubuntu@${PUBLIC_IP}" /bin/bash <<'EOF'
+            # Update package list.
             sudo apt-get update
             
-            # Login to Docker
+            # Log in to Docker.
             echo "Logging into Docker..."
             sudo docker login ghcr.io -u ${GITHUB_ACTOR} -p ${GHCR_PAT}
             
-            # Pull the latest image
+            # Pull the latest image.
             echo "Pulling latest image..."
             sudo docker pull ghcr.io/limogiai/ibs-care-app:latest
             
-            # Stop and remove any existing container
+            # Stop and remove any existing container.
             echo "Cleaning up existing container..."
             sudo docker stop ibs-care-app || true
             sudo docker rm ibs-care-app || true
             
-            # Run the new container
+            # Run the new container.
             echo "Starting new container..."
             sudo docker run -d --name ibs-care-app -p 4434:80 ghcr.io/limogiai/ibs-care-app:latest
             
-            # Verify the container is running
+            # Verify that the container is running.
             echo "Verifying deployment..."
             sudo docker ps | grep ibs-care-app
             EOF
