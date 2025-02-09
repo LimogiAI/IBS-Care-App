@@ -86,4 +86,3 @@ export const getUser = async (): Promise<User | null> => {
 export const logout = async () => {
   await userManager.signoutRedirect();
 };
-
