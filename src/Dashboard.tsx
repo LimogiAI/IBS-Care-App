@@ -1,8 +1,10 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { logout } from "./services/authService";
+import {  getUser, logout } from "./services/authService";
 import { fetchFHIRResource } from "./utils/fhirUtils";
 import { AppBar, Toolbar, Typography, Box, Button, Card, CardContent, CircularProgress } from "@mui/material";
+
 
 // Define Patient Type
 interface Patient {
@@ -14,15 +16,27 @@ interface Patient {
   contact?: string;
 }
 
+interface User {
+  familyName?: string;
+  userType?: string;
+  name: string;
+  username?: string;
+  givenName?: string;
+}
+
 const Dashboard = () => {
   const [patient, setPatient] = useState<Patient | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
+        const userInfo = await getUser ()
+        console.log("userInfo:",userInfo)
+      
         const access_token = sessionStorage.getItem("access_token") || '';
         console.log("Authenticated User:", access_token);
 
@@ -32,6 +46,24 @@ const Dashboard = () => {
         }
 
         setToken(access_token);
+
+        try {
+          const userInfoResponse = await fetch('https://app.meldrx.com/connect/userinfo', {
+            headers: {
+              'Authorization': `Bearer ${access_token}`
+            }
+          });
+          console.log('User Inforesopnse:', userInfoResponse);
+          if (userInfoResponse.ok) {
+            const userInfoData = await userInfoResponse.json();
+            setUser(userInfoData);
+           
+          } else {
+            console.error('Failed to fetch user info:', userInfoResponse.statusText);
+          }
+        } catch (userInfoError) {
+          console.error('Error fetching user info:', userInfoError);
+        }
 
         // Get Patient ID from sessionStorage
         const patientId = sessionStorage.getItem("patientId") || '';
@@ -80,7 +112,7 @@ const Dashboard = () => {
     await logout();
     navigate("/launch");
   };
-
+  console.log('User Info:', user);
   return (
     <>
       <AppBar position="static">
@@ -90,7 +122,7 @@ const Dashboard = () => {
           </Typography>
           {token && (
             <Typography variant="subtitle1" sx={{ mr: 2 }}>
-              Welcome, Doctor
+              Welcome, {user?.name}
             </Typography>
           )}
           <Button color="inherit" onClick={handleLogout}>Logout</Button>

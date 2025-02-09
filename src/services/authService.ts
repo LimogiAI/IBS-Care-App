@@ -6,7 +6,7 @@ const userManager = new UserManager({
   response_type: "code",
   // redirect_uri: "https://ibscare-app.limogi.ai/callback",
   redirect_uri: 'http://localhost:4434/callback',
-  // scope: "openid profile launch patient/*.read",
+  scope: "cds openid profile launch patient/*.read",
 });
 const oidcClient = new OidcClient({
   authority: "https://app.meldrx.com",
@@ -28,7 +28,7 @@ export const login = async () => {
     });
 
     await userManager.signinRedirect({
-      scope: "openid profile launch patient/*.read",
+      scope: "cds openid profile launch patient/*.read",
       extraQueryParams,
     });
   }
@@ -66,7 +66,7 @@ export const handleCallback = async (): Promise<{ user: User | null; patientId: 
         expires_at: result.expires_at,
         url_state: result.state ?? undefined,
       });
-
+console.log ("chech user:", result)
       return { user, patientId };
     } catch (error) {
       console.error("❌ Error processing OIDC callback:", error);
