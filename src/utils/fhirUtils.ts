@@ -1,21 +1,18 @@
 // src/utils/fhirUtils.ts
-export const fetchFHIRResource = async (accessToken: string, resourceUrl: string) => {
-    try {
-      const response = await fetch(resourceUrl, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          Accept: "application/fhir+json",
-        },
-      });
+export async function fetchFHIRResource<T>(
+  access_token: string, 
+  url: string
+): Promise<T> {
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${access_token}`,
+    },
+  });
   
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
   
-      return await response.json();
-    } catch (error) {
-      console.error("Error fetching FHIR resource:", error);
-      throw error;
-    }
-  };
+  return response.json();
+}
   

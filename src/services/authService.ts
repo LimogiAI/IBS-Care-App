@@ -1,19 +1,26 @@
-import { UserManager, OidcClient, User } from "oidc-client-ts";
+import { UserManager, OidcClient, User, SigninResponse } from "oidc-client-ts";
+
+
+// Create an interface that extends SigninResponse to include the patient field
+interface CustomSigninResponse extends SigninResponse {
+  patient?: string;
+}
 
 const userManager = new UserManager({
-  authority: "https://app.meldrx.com",
-  client_id: "b5de3fccab5046cc99ae551ddc2c774e",
-  response_type: "code",
-  // redirect_uri: "https://ibscare-app.limogi.ai/callback",
-  redirect_uri: 'http://localhost:4434/callback',
-  // scope: "openid profile launch patient/*.read",
+  authority: import.meta.env.VITE_OIDC_AUTHORITY,
+  client_id: import.meta.env.VITE_OIDC_CLIENT_ID,
+  response_type: import.meta.env.VITE_OIDC_RESPONSE_TYPE,
+  redirect_uri: import.meta.env.MODE === 'production' 
+    ? import.meta.env.VITE_OIDC_REDIRECT_URI_PROD 
+    : import.meta.env.VITE_OIDC_REDIRECT_URI_LOCAL,
 });
 const oidcClient = new OidcClient({
-  authority: "https://app.meldrx.com",
-  client_id: "b5de3fccab5046cc99ae551ddc2c774e",
-  response_type: "code",
-  redirect_uri: 'http://localhost:4434/callback',
-  // redirect_uri: "https://ibscare-app.limogi.ai/callback",
+  authority: import.meta.env.VITE_OIDC_AUTHORITY,
+  client_id: import.meta.env.VITE_OIDC_CLIENT_ID,
+  response_type: import.meta.env.VITE_OIDC_RESPONSE_TYPE,
+  redirect_uri: import.meta.env.MODE === 'production' 
+    ? import.meta.env.VITE_OIDC_REDIRECT_URI_PROD 
+    : import.meta.env.VITE_OIDC_REDIRECT_URI_LOCAL,
 });
 
 // Sign in function with extra query params
@@ -43,7 +50,7 @@ export const handleCallback = async (): Promise<{ user: User | null; patientId: 
       console.log("OIDC Auth Result:", result);
 
       // ✅ Type assertion to bypass TypeScript check
-      const customResult = result as any; 
+      const customResult = result as CustomSigninResponse; 
 
       let patientId: string | null = null;
 
