@@ -233,7 +233,7 @@ export const ClinicalDataSection: FC<ClinicalDataSectionProps> = ({
           isDarkMode ? "text-white" : "text-gray-900"
         }`}
       >
-        Clinical Data
+        Clinical Data from EHR
       </h2>
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
         <div className="w-full min-w-0">

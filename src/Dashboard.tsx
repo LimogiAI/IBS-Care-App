@@ -85,6 +85,8 @@ const Dashboard: React.FC = () => {
     };
   }, [patient, conditions, observations]);
 
+  console.log({processedFHIRData}, "Processed FHIR Data for AI")
+
   // Use the IBS Analysis hook
   const {
     analysis,

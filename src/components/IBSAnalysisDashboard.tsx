@@ -153,6 +153,13 @@ const IBSAnalysisDashboard: React.FC<IBSAnalysisProps> = ({
 }) => {
   return (
     <div className="space-y-6">
+       <h2
+        className={`text-xl font-bold mb-6 ${
+          isDarkMode ? "text-white" : "text-gray-900"
+        }`}
+      >
+        IBS Analysis Based on ROME IV Criteria
+      </h2>
       {/* Top Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className={`rounded-xl border p-6 ${
