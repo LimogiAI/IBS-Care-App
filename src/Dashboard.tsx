@@ -20,6 +20,7 @@ const Dashboard: React.FC = () => {
   const { isDarkMode, handleThemeToggle } = useTheme();
   const navigate = useNavigate();
   const [user, setUser] = useState<UserProfile | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0); // For controlled refresh
   const accessToken = sessionStorage.getItem("access_token") || "";
   const patientId = sessionStorage.getItem("patientId") || "";
 
@@ -47,23 +48,25 @@ const Dashboard: React.FC = () => {
     patient,
     loading: patientLoading,
     error: patientError,
-  } = usePatient(accessToken, patientId);
+  } = usePatient(accessToken, patientId, refreshKey);
 
   const {
     conditions,
     loading: conditionsLoading,
     error: conditionsError,
-  } = useConditions(accessToken, patientId);
+  } = useConditions(accessToken, patientId, refreshKey);
 
   const {
     observations,
     loading: observationsLoading,
     error: observationsError,
-  } = useObservations(accessToken, patientId);
+  } = useObservations(accessToken, patientId, refreshKey);
 
   // Construct processed FHIR data for analysis
   const processedFHIRData = useMemo(() => {
-    if (!patient) return null;
+    if (!patient || patientLoading || conditionsLoading || observationsLoading) {
+      return null; // Wait until all data is fully loaded
+    }
     return {
       patient: {
         id: patient.id,
@@ -83,11 +86,18 @@ const Dashboard: React.FC = () => {
         effectiveDateTime: observation.effectiveDateTime,
       })),
     };
-  }, [patient, conditions, observations]);
+  }, [
+    patient,
+    conditions,
+    observations,
+    patientLoading,
+    conditionsLoading,
+    observationsLoading,
+  ]);
 
-  console.log({processedFHIRData}, "Processed FHIR Data for AI")
+  console.log({ processedFHIRData }, "Processed FHIR Data for AI");
 
-  // Use the IBS Analysis hook
+  // Use the IBS Analysis hook only when data is ready
   const {
     analysis,
     loading: analysisLoading,
@@ -98,6 +108,10 @@ const Dashboard: React.FC = () => {
     sessionStorage.removeItem("access_token");
     sessionStorage.removeItem("patientId");
     navigate("/launch");
+  };
+
+  const handleRefresh = () => {
+    setRefreshKey((prev) => prev + 1); // Trigger refetch of all hooks
   };
 
   return (
@@ -114,10 +128,7 @@ const Dashboard: React.FC = () => {
       />
 
       <main className="container mx-auto px-4 py-8 max-w-7xl">
-        <DashboardHeader
-          isDarkMode={isDarkMode}
-          onRefresh={() => window.location.reload()}
-        />
+        <DashboardHeader isDarkMode={isDarkMode} onRefresh={handleRefresh} />
 
         {/* Patient Demographics Section */}
         <section className="mb-8">

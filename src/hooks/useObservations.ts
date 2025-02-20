@@ -27,7 +27,7 @@ function parseObservation(resource: FHIRObservation): FormattedObservation {
   };
 }
 
-export function useObservations(accessToken: string, patientId: string) {
+export function useObservations(accessToken: string, patientId: string, refreshKey: number) {
   const [observations, setObservations] = useState<FormattedObservation[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -82,7 +82,7 @@ export function useObservations(accessToken: string, patientId: string) {
     };
 
     fetchObservations();
-  }, [accessToken, patientId]);
+  }, [accessToken, patientId, refreshKey]);
 
   return {
     observations,

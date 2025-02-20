@@ -34,7 +34,7 @@ function parseCondition(resource: FHIRCondition): FormattedCondition {
 /**
  * React hook for fetching all Conditions for a given patient.
  */
-export function useConditions(accessToken: string, patientId: string) {
+export function useConditions(accessToken: string, patientId: string, refreshKey: number) {
   const [conditions, setConditions] = useState<FormattedCondition[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -90,7 +90,7 @@ export function useConditions(accessToken: string, patientId: string) {
     };
 
     fetchConditions();
-  }, [accessToken, patientId]);
+  }, [accessToken, patientId, refreshKey]);
 
   return {
     conditions,

@@ -176,12 +176,12 @@ const IBSAnalysisDashboard: React.FC<IBSAnalysisProps> = ({
           <p className={`text-2xl font-semibold ${
             isDarkMode ? 'text-gray-200' : 'text-gray-900'
           }`}>
-            {analysis.clinicalAssessment.ibsSSS.totalScore.value}
+            {analysis?.clinicalAssessment?.ibsSSS?.totalScore?.value || 'N/A'}
           </p>
           <p className={`text-sm ${
             isDarkMode ? 'text-gray-400' : 'text-gray-600'
           }`}>
-            {analysis.clinicalAssessment.ibsSSS.totalScore.interpretation}
+            {analysis.clinicalAssessment.ibsSSS.totalScore.interpretation || "N/A"}
           </p>
         </div>
 
@@ -199,12 +199,12 @@ const IBSAnalysisDashboard: React.FC<IBSAnalysisProps> = ({
           <p className={`text-2xl font-semibold ${
             isDarkMode ? 'text-gray-200' : 'text-gray-900'
           }`}>
-            Type {analysis.clinicalAssessment.bristolStoolScale.value}
+            Type {analysis.clinicalAssessment.bristolStoolScale.value || "N/A"}
           </p>
           <p className={`text-sm ${
             isDarkMode ? 'text-gray-400' : 'text-gray-600'
           }`}>
-            {analysis.clinicalAssessment.bristolStoolScale.interpretation}
+            {analysis.clinicalAssessment.bristolStoolScale.interpretation || "N/A"}
           </p>
         </div>
 
@@ -275,31 +275,31 @@ const IBSAnalysisDashboard: React.FC<IBSAnalysisProps> = ({
         <div className="space-y-4">
           <ScoreIndicator 
             label="Abdominal Pain Severity"
-            value={analysis.clinicalAssessment.ibsSSS.abdominalPainSeverity.value}
+            value={analysis?.clinicalAssessment?.ibsSSS?.abdominalPainSeverity?.value || 0}
             maxValue={100}
             isDarkMode={isDarkMode}
           />
           <ScoreIndicator 
             label="Abdominal Pain Frequency"
-            value={analysis.clinicalAssessment.ibsSSS.abdominalPainFrequency.value}
+            value={analysis?.clinicalAssessment?.ibsSSS?.abdominalPainFrequency?.value || 0}
             maxValue={100}
             isDarkMode={isDarkMode}
           />
           <ScoreIndicator 
             label="Bloating Severity"
-            value={analysis.clinicalAssessment.ibsSSS.bloatingSeverity.value}
+            value={analysis?.clinicalAssessment?.ibsSSS?.bloatingSeverity?.value || 0}
             maxValue={100}
             isDarkMode={isDarkMode}
           />
           <ScoreIndicator 
             label="Bowel Habit Dissatisfaction"
-            value={analysis.clinicalAssessment.ibsSSS.bowelHabitDissatisfaction?.value || null}
+            value={analysis?.clinicalAssessment?.ibsSSS?.bowelHabitDissatisfaction?.value || 0}
             maxValue={100}
             isDarkMode={isDarkMode}
           />
           <ScoreIndicator 
             label="Life Interference"
-            value={analysis.clinicalAssessment.ibsSSS.lifeInterference?.value || null}
+            value={analysis?.clinicalAssessment?.ibsSSS?.lifeInterference?.value || 0}
             maxValue={100}
             isDarkMode={isDarkMode}
           />
