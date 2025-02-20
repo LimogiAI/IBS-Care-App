@@ -60,7 +60,7 @@ const parsePatientData = (data: FHIRPatient): Patient => {
   };
 };
 
-export function usePatient(accessToken: string, patientId: string) {
+export function usePatient(accessToken: string, patientId: string, refreshKey: number) {
   const [patient, setPatient] = useState<Patient | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -102,7 +102,7 @@ export function usePatient(accessToken: string, patientId: string) {
     };
 
     fetchPatient();
-  }, [accessToken, patientId]);
+  }, [accessToken, patientId, refreshKey]);
 
   return {
     patient,
