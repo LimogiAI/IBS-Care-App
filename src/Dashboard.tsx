@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Card } from "@/components/ui/card";
 import Header from "./components/Header";
 import PatientCard from "./components/PatientCard";
 import { DashboardHeader } from "./components/DashboardHeader";
@@ -15,12 +16,13 @@ import { UserProfile } from "oidc-client-ts";
 import { computeAge } from "./utils/ibsAnalysis";
 import ClinicalDataSection from "./components/clinical/ClinicalDataComponents";
 import IBSAnalysisDashboard from "./components/IBSAnalysisDashboard";
+import RomeIVQuestionnaire from "./components/RomeIVQuestionnaire";
 
 const Dashboard: React.FC = () => {
   const { isDarkMode, handleThemeToggle } = useTheme();
   const navigate = useNavigate();
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [refreshKey, setRefreshKey] = useState(0); // For controlled refresh
+  const [refreshKey, setRefreshKey] = useState(0);
   const accessToken = sessionStorage.getItem("access_token") || "";
   const patientId = sessionStorage.getItem("patientId") || "";
 
@@ -64,7 +66,12 @@ const Dashboard: React.FC = () => {
 
   // Construct processed FHIR data for analysis
   const processedFHIRData = useMemo(() => {
-    if (!patient || patientLoading || conditionsLoading || observationsLoading) {
+    if (
+      !patient ||
+      patientLoading ||
+      conditionsLoading ||
+      observationsLoading
+    ) {
       return null; // Wait until all data is fully loaded
     }
     return {
@@ -111,7 +118,7 @@ const Dashboard: React.FC = () => {
   };
 
   const handleRefresh = () => {
-    setRefreshKey((prev) => prev + 1); // Trigger refetch of all hooks
+    setRefreshKey((prev) => prev + 1);
   };
 
   return (
@@ -180,6 +187,41 @@ const Dashboard: React.FC = () => {
             ) : null}
           </section>
         )}
+
+        {/* Rome IV Questionnaire Section */}
+        {!analysisLoading &&
+        !analysis?.clinicalAssessment?.romeIVCriteriaMet ? (
+          <section className="mb-8">
+            <Card
+              className={`p-6 ${
+                isDarkMode
+                  ? "bg-gray-800 border-gray-700"
+                  : "bg-white border-gray-200"
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2
+                    className={`text-xl font-bold ${
+                      isDarkMode ? "text-white" : "text-gray-900"
+                    }`}
+                  >
+                    IBS Assessment
+                  </h2>
+                  <p
+                    className={`mt-1 ${
+                      isDarkMode ? "text-gray-400" : "text-gray-600"
+                    }`}
+                  >
+                    Complete the Rome IV criteria questionnaire for IBS
+                    diagnosis
+                  </p>
+                </div>
+                <RomeIVQuestionnaire isDarkMode={isDarkMode} />
+              </div>
+            </Card>
+          </section>
+        ) : null}
       </main>
     </div>
   );

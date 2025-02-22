@@ -9,76 +9,11 @@ import {
   Stethoscope,
   Scale,
 } from "lucide-react";
+import { IBSAssessment } from "../types/ibs";
 
-interface IBSAnalysisProps {
+interface IBSAnalysisProps  {
   isDarkMode: boolean;
-  analysis: {
-    overallNarrativeSummary: string;
-    clinicalAssessment: {
-      romeIVCriteriaMet: boolean;
-      narrativeSummary: string;
-      ibsSSS: {
-        narrativeSummary: string;
-        abdominalPainSeverity: {
-          value: number;
-          sourceData: string;
-          clinicalGap: string;
-        };
-        abdominalPainFrequency: {
-          value: number;
-          sourceData: string;
-          clinicalGap: string;
-        };
-        bloatingSeverity: {
-          value: number;
-          sourceData: string;
-          clinicalGap: string;
-        };
-        bowelHabitDissatisfaction: {
-          value: number | null;
-          sourceData: string;
-          clinicalGap: string;
-        };
-        lifeInterference: {
-          value: number | null;
-          sourceData: string;
-          clinicalGap: string;
-        };
-        totalScore: {
-          value: number;
-          interpretation: string;
-        };
-      };
-      bristolStoolScale: {
-        value: number;
-        sourceData: string;
-        interpretation: string;
-        narrativeSummary: string;
-      };
-      ibsSubtype: {
-        classification: "IBS-C" | "IBS-D" | "IBS-M" | "IBS-U";
-        reasoning: string;
-        confidenceLevel: string;
-        narrativeSummary: string;
-      };
-    };
-    missingInformation: {
-      narrativeSummary: string;
-      criticalGaps: string[];
-      recommendedAssessments: string[];
-    };
-    clinicalRecommendations: {
-      narrativeSummary: string;
-      immediateActions: string[];
-      suggestedLabTests: string[];
-      dataCollectionNeeded: string[];
-    };
-    reliabilityAssessment: {
-      narrativeSummary: string;
-      limitingFactors: string[];
-      confidenceLevel: string;
-    };
-  };
+  analysis:IBSAssessment;
 }
 
 const SectionCard: React.FC<{
