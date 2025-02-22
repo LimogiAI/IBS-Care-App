@@ -36,7 +36,7 @@ export function useDiagnosticReports(accessToken: string, patientId: string) {
         // Request the bundle of DiagnosticReports for this patient
         // Example: "DiagnosticReport?patient=123"
         const bundle = await client.request<fhirclient.FHIR.Bundle>(
-          `DiagnosticReport?patient=${patientId}`
+          `DiagnosticReport?patient=${patientId}&_count=500`
         );
 
         if (!bundle.entry || bundle.entry.length === 0) {

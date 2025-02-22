@@ -9,6 +9,7 @@ import { useTheme } from "./hooks/useTheme";
 import { usePatient } from "./hooks/usePatient";
 import { useConditions } from "./hooks/useConditions";
 import { useObservations } from "./hooks/useObservations";
+import { useClinicalImpressions } from "./hooks/useClinicalImpressions";
 import { useIBSAnalysis } from "./hooks/useIBSAnalysis";
 import { fetchUserInfo } from "./services/userService";
 import { UserProfile } from "oidc-client-ts";
@@ -62,6 +63,12 @@ const Dashboard: React.FC = () => {
     error: observationsError,
   } = useObservations(accessToken, patientId, refreshKey);
 
+  const {
+    impressions,
+    loading: ImpressionsLoading,
+    error: ImpressionsError,
+  } = useClinicalImpressions(accessToken, patientId, refreshKey);
+  
   // Construct processed FHIR data for analysis
   const processedFHIRData = useMemo(() => {
     if (!patient || patientLoading || conditionsLoading || observationsLoading) {
@@ -161,6 +168,9 @@ const Dashboard: React.FC = () => {
             observations={observations}
             observationsLoading={observationsLoading}
             observationsError={observationsError}
+            impressions={impressions}  // ✅ Ensure impressions are passed
+  impressionsLoading={ImpressionsLoading}
+  impressionsError={ImpressionsError}
             isDarkMode={isDarkMode}
           />
         </section>
@@ -184,5 +194,6 @@ const Dashboard: React.FC = () => {
     </div>
   );
 };
+
 
 export default Dashboard;
