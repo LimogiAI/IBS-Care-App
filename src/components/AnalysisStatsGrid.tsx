@@ -12,7 +12,7 @@ export const AnalysisStatsGrid: React.FC<AnalysisStatsGridProps> = ({ isDarkMode
   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
     <StatsCard
       title="Total IBS-SSS Score"
-      value={`${analysis.clinicalAssessment.ibsSSS.totalScore.value} (${analysis.clinicalAssessment.ibsSSS.totalScore.interpretation || 'N/A'})`}
+      value={`${analysis.clinicalAssessment.ibsSSS.totalScore.value || 'N/A'} (${analysis.clinicalAssessment.ibsSSS.totalScore.interpretation || 'N/A'})`}
       icon={null} // Optionally, replace null with an appropriate icon component
       trend={null}
       trendValue={null}

@@ -136,7 +136,7 @@ const ListSection: React.FC<{
   isDarkMode: boolean;
 }> = ({ items, isDarkMode }) => (
   <ul className="space-y-2">
-    {items.map((item, index) => (
+    {items?.map((item, index) => (
       <li key={index} className={`flex items-start gap-2 ${
         isDarkMode ? 'text-gray-300' : 'text-gray-600'
       }`}>
@@ -181,7 +181,7 @@ const IBSAnalysisDashboard: React.FC<IBSAnalysisProps> = ({
           <p className={`text-sm ${
             isDarkMode ? 'text-gray-400' : 'text-gray-600'
           }`}>
-            {analysis.clinicalAssessment.ibsSSS.totalScore.interpretation || "N/A"}
+            {analysis?.clinicalAssessment?.ibsSSS?.totalScore?.interpretation || "N/A"}
           </p>
         </div>
 
@@ -199,12 +199,12 @@ const IBSAnalysisDashboard: React.FC<IBSAnalysisProps> = ({
           <p className={`text-2xl font-semibold ${
             isDarkMode ? 'text-gray-200' : 'text-gray-900'
           }`}>
-            Type {analysis.clinicalAssessment.bristolStoolScale.value || "N/A"}
+            Type {analysis?.clinicalAssessment?.bristolStoolScale?.value || "N/A"}
           </p>
           <p className={`text-sm ${
             isDarkMode ? 'text-gray-400' : 'text-gray-600'
           }`}>
-            {analysis.clinicalAssessment.bristolStoolScale.interpretation || "N/A"}
+            {analysis?.clinicalAssessment?.bristolStoolScale?.interpretation || "N/A"}
           </p>
         </div>
 
@@ -222,12 +222,12 @@ const IBSAnalysisDashboard: React.FC<IBSAnalysisProps> = ({
           <p className={`text-2xl font-semibold ${
             isDarkMode ? 'text-gray-200' : 'text-gray-900'
           }`}>
-            {analysis.clinicalAssessment.ibsSubtype.classification}
+            {analysis?.clinicalAssessment?.ibsSubtype?.classification}
           </p>
           <p className={`text-sm ${
             isDarkMode ? 'text-gray-400' : 'text-gray-600'
           }`}>
-            {analysis.clinicalAssessment.ibsSubtype.confidenceLevel} confidence
+            {analysis?.clinicalAssessment?.ibsSubtype?.confidenceLevel} confidence
           </p>
         </div>
 
@@ -245,12 +245,12 @@ const IBSAnalysisDashboard: React.FC<IBSAnalysisProps> = ({
           <p className={`text-2xl font-semibold ${
             isDarkMode ? 'text-gray-200' : 'text-gray-900'
           }`}>
-            {analysis.clinicalAssessment.romeIVCriteriaMet ? 'Met' : 'Not Met'}
+            {analysis?.clinicalAssessment?.romeIVCriteriaMet ? 'Met' : 'Not Met'}
           </p>
           <p className={`text-sm ${
             isDarkMode ? 'text-gray-400' : 'text-gray-600'
           }`}>
-            {analysis.clinicalAssessment.romeIVCriteriaMet ? 'Criteria satisfied' : 'Further evaluation needed'}
+            {analysis?.clinicalAssessment?.romeIVCriteriaMet ? 'Criteria satisfied' : 'Further evaluation needed'}
           </p>
         </div>
       </div>
@@ -319,7 +319,7 @@ const IBSAnalysisDashboard: React.FC<IBSAnalysisProps> = ({
                 isDarkMode ? 'text-gray-200' : 'text-gray-900'
               }`}>Immediate Actions</h4>
               <ListSection 
-                items={analysis.clinicalRecommendations.immediateActions}
+                items={analysis?.clinicalRecommendations?.immediateActions}
                 isDarkMode={isDarkMode}
               />
             </div>
@@ -328,7 +328,7 @@ const IBSAnalysisDashboard: React.FC<IBSAnalysisProps> = ({
                 isDarkMode ? 'text-gray-200' : 'text-gray-900'
               }`}>Suggested Lab Tests</h4>
               <ListSection 
-                items={analysis.clinicalRecommendations.suggestedLabTests}
+                items={analysis?.clinicalRecommendations?.suggestedLabTests}
                 isDarkMode={isDarkMode}
               />
             </div>
@@ -342,14 +342,14 @@ const IBSAnalysisDashboard: React.FC<IBSAnalysisProps> = ({
         >
           <div className="space-y-4">
             <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-              {analysis.missingInformation.narrativeSummary}
+              {analysis?.missingInformation?.narrativeSummary}
             </p>
             <div>
               <h4 className={`font-medium mb-2 ${
                 isDarkMode ? 'text-gray-200' : 'text-gray-900'
               }`}>Critical Gaps</h4>
               <ListSection 
-                items={analysis.missingInformation.criticalGaps}
+                items={analysis?.missingInformation?.criticalGaps}
                 isDarkMode={isDarkMode}
               />
             </div>
