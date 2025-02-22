@@ -44,7 +44,7 @@ export interface IBSAssessment {
         narrativeSummary: string;
       };
       ibsSubtype: {
-        classification: "IBS-C" | "IBS-D" | "IBS-M" | "IBS-U";
+        classification: "IBS-C" | "IBS-D" | "IBS-M" | "IBS-U" | "Undetermined";
         reasoning: string;
         confidenceLevel: string;
         narrativeSummary: string;
