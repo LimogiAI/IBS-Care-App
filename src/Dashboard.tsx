@@ -10,6 +10,8 @@ import { useTheme } from "./hooks/useTheme";
 import { usePatient } from "./hooks/usePatient";
 import { useConditions } from "./hooks/useConditions";
 import { useObservations } from "./hooks/useObservations";
+import { useClinicalImpressions } from "./hooks/useClinicalImpressions";
+import { useDiagnosticReports } from "./hooks/useDiagnosticReports";
 import { useIBSAnalysis } from "./hooks/useIBSAnalysis";
 import { fetchUserInfo } from "./services/userService";
 import { UserProfile } from "oidc-client-ts";
@@ -17,7 +19,7 @@ import { computeAge } from "./utils/ibsAnalysis";
 import ClinicalDataSection from "./components/clinical/ClinicalDataComponents";
 import IBSAnalysisDashboard from "./components/IBSAnalysisDashboard";
 import RomeIVQuestionnaire from "./components/RomeIVQuestionnaire";
-import { useClinicalImpressions } from "./hooks/useClinicalImpressions";
+
 
 const Dashboard: React.FC = () => {
   const { isDarkMode, handleThemeToggle } = useTheme();
@@ -70,6 +72,12 @@ const Dashboard: React.FC = () => {
     loading: ImpressionsLoading,
     error: ImpressionsError,
   } = useClinicalImpressions(accessToken, patientId, refreshKey);
+  
+  const {
+    reports,
+    loading: reportsLoading,
+    error: reportsError,
+  } = useDiagnosticReports(accessToken, patientId, refreshKey);
 
   // Construct processed FHIR data for analysis
   const processedFHIRData = useMemo(() => {
@@ -178,6 +186,9 @@ const Dashboard: React.FC = () => {
             impressions={impressions}  // ✅ Ensure impressions are passed
             impressionsLoading={ImpressionsLoading}
             impressionsError={ImpressionsError}
+  reports={reports}  // ✅ Ensure reports are passed
+  reportsLoading={reportsLoading}
+  reportsError={reportsError}
             isDarkMode={isDarkMode}
           />
         </section>

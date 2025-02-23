@@ -5,6 +5,7 @@ import { ErrorMessage } from "../ErrorMessage";
 import { FormattedCondition } from "../../hooks/useConditions";
 import { FormattedObservation } from "../../types/FHIRObservation";
 import { ParsedClinicalImpression } from "../../types/FHIRClinicalImpression";
+import { ParsedDiagnosticReport } from "../../types/FHIRDiagnosticReport";
 
 interface AccordionCardProps {
   title: string;
@@ -43,6 +44,14 @@ interface ClinicalImpressionCardProps {
   error: string | null;
   isDarkMode: boolean;
 }
+
+interface DiagnosticReportCardProps {
+  reports: ParsedDiagnosticReport[];
+  loading: boolean;
+  error: string | null;
+  isDarkMode: boolean;
+}
+
 interface ClinicalDataSectionProps {
   conditions: FormattedCondition[];
   conditionsLoading: boolean;
@@ -53,6 +62,9 @@ interface ClinicalDataSectionProps {
   impressions: ParsedClinicalImpression[];
   impressionsLoading: boolean;
   impressionsError: string | null;
+  reports: ParsedDiagnosticReport[];
+  reportsLoading: boolean;
+  reportsError: string | null;
   isDarkMode: boolean;
 }
 
@@ -264,6 +276,42 @@ export const ClinicalImpressionCard: FC<ClinicalImpressionCardProps> = ({
   );
 };
 
+export const DiagnosticReportsCard: FC<DiagnosticReportCardProps> = ({
+  reports = [],
+  loading,
+  error,
+  isDarkMode,
+}) => {
+  const [isOpen, setIsOpen] = useState(true);
+
+  console.log("daignosticcard received diagnostic:", reports); 
+
+  if (loading) return <LoadingIndicator isDarkMode={isDarkMode} />;
+  if (error) return <ErrorMessage message={error} isDarkMode={isDarkMode} />;
+  if (!reports.length) return null;
+
+  return (
+    <AccordionCard
+      title="Daignostic Report"
+      isDarkMode={isDarkMode}
+      isOpen={!isOpen}
+      onToggle={() => setIsOpen(!isOpen)}
+      count={reports.length}
+    >
+      <div className="space-y-2">
+        {reports.map((reports) => (
+          <ClinicalItem
+            key={reports.id}
+            title={reports.status}
+            value={reports.description}
+            date={reports.effectiveDateTime || reports.date || ""}
+            isDarkMode={isDarkMode}
+          />
+        ))}
+      </div>
+    </AccordionCard>
+  );
+};
 
 export const ClinicalDataSection: FC<ClinicalDataSectionProps> = ({
   conditions,
@@ -275,9 +323,14 @@ export const ClinicalDataSection: FC<ClinicalDataSectionProps> = ({
   impressions,
   impressionsLoading,
   impressionsError,
+  reports,
+  reportsLoading,
+  reportsError,
   isDarkMode,
 }) => {
-  console.log("Clinical Impressions received in ClinicalDataSection:", impressions);
+
+ console.log("Clinical Impressions received in ClinicalDataSection:", impressions);
+
   return (
     <section className="col-span-full">
       <h2
@@ -311,7 +364,15 @@ export const ClinicalDataSection: FC<ClinicalDataSectionProps> = ({
             error={impressionsError}
             isDarkMode={isDarkMode}
           />
-          </div>
+        </div>
+        <div className="w-full min-w-0"> 
+          <DiagnosticReportsCard
+            reports={reports || []}
+            loading={reportsLoading}
+            error={reportsError}
+            isDarkMode={isDarkMode}
+          />
+          </div>      
       </div>
     </section>
   );
