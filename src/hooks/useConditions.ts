@@ -61,7 +61,7 @@ export function useConditions(accessToken: string, patientId: string, refreshKey
         // Search for Condition resources for this patient
         // Type argument: we expect a Bundle of Condition entries
         const bundle = await client.request<fhirclient.FHIR.Bundle>(
-          `Condition?patient=${patientId}`
+          `Condition?patient=${patientId}&_count=100`
         );
         console.log({ bundle }, "Patient Conditions")
         if (!bundle.entry || !bundle.entry.length) {

@@ -35,7 +35,7 @@ function parseClinicalImpression(resource: FHIRClinicalImpression): ParsedClinic
 /**
  * Hook to fetch all ClinicalImpression resources for a given patientId.
  */
-export function useClinicalImpressions(accessToken: string, patientId: string) {
+export function useClinicalImpressions(accessToken: string, patientId: string, refreshKey: number) {
     const [impressions, setImpressions] = useState<ParsedClinicalImpression[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
@@ -61,9 +61,9 @@ export function useClinicalImpressions(accessToken: string, patientId: string) {
 
                 // Request a Bundle of ClinicalImpression resources
                 const bundle = await client.request<fhirclient.FHIR.Bundle>(
-                    `ClinicalImpression?patient=${patientId}`
+                    `ClinicalImpression?patient=${patientId}&_count=500`
                 );
-
+                console.log("Fetched ClinicalImpressions (Raw FHIR Response):", bundle); // ✅ Debug raw API
                 if (!bundle.entry || bundle.entry.length === 0) {
                     // No impressions found
                     setImpressions([]);
@@ -87,7 +87,8 @@ export function useClinicalImpressions(accessToken: string, patientId: string) {
         };
 
         fetchImpressions();
-    }, [accessToken, patientId]);
+    }, [accessToken, patientId, refreshKey]);
+    console.log("State Updated: ClinicalImpressions:", impressions); // ✅ Debug state update
 
     return {
         impressions,

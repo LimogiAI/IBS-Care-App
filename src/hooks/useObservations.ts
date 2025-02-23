@@ -53,7 +53,7 @@ export function useObservations(accessToken: string, patientId: string, refreshK
 
         // Request a Bundle of Observations for this patient
         const bundle = await client.request<fhirclient.FHIR.Bundle>(
-          `Observation?patient=${patientId}`
+          `Observation?patient=${patientId}&_count=500`
         );
 
         console.log({bundle}, "Patient Observations")

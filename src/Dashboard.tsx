@@ -17,6 +17,7 @@ import { computeAge } from "./utils/ibsAnalysis";
 import ClinicalDataSection from "./components/clinical/ClinicalDataComponents";
 import IBSAnalysisDashboard from "./components/IBSAnalysisDashboard";
 import RomeIVQuestionnaire from "./components/RomeIVQuestionnaire";
+import { useClinicalImpressions } from "./hooks/useClinicalImpressions";
 
 const Dashboard: React.FC = () => {
   const { isDarkMode, handleThemeToggle } = useTheme();
@@ -63,6 +64,12 @@ const Dashboard: React.FC = () => {
     loading: observationsLoading,
     error: observationsError,
   } = useObservations(accessToken, patientId, refreshKey);
+
+  const {
+    impressions,
+    loading: ImpressionsLoading,
+    error: ImpressionsError,
+  } = useClinicalImpressions(accessToken, patientId, refreshKey);
 
   // Construct processed FHIR data for analysis
   const processedFHIRData = useMemo(() => {
@@ -168,6 +175,9 @@ const Dashboard: React.FC = () => {
             observations={observations}
             observationsLoading={observationsLoading}
             observationsError={observationsError}
+            impressions={impressions}  // ✅ Ensure impressions are passed
+            impressionsLoading={ImpressionsLoading}
+            impressionsError={ImpressionsError}
             isDarkMode={isDarkMode}
           />
         </section>
