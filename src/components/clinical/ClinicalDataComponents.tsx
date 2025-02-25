@@ -303,8 +303,8 @@ export const DiagnosticReportsCard: FC<DiagnosticReportCardProps> = ({
           <ClinicalItem
             key={reports.id}
             title={reports.status}
-            value={reports.description}
-            date={reports.effectiveDateTime || reports.date || ""}
+            value={reports.conclusion}
+            date={reports.effectiveDateTime || ""}
             isDarkMode={isDarkMode}
           />
         ))}

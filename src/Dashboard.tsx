@@ -19,6 +19,7 @@ import { computeAge } from "./utils/ibsAnalysis";
 import ClinicalDataSection from "./components/clinical/ClinicalDataComponents";
 import IBSAnalysisDashboard from "./components/IBSAnalysisDashboard";
 import RomeIVQuestionnaire from "./components/RomeIVQuestionnaire";
+import RomeIVDashboard from "@/components/RomeIVDashboard";
 
 
 const Dashboard: React.FC = () => {
@@ -73,11 +74,11 @@ const Dashboard: React.FC = () => {
     error: ImpressionsError,
   } = useClinicalImpressions(accessToken, patientId, refreshKey);
   
-  const {
-    reports,
-    loading: reportsLoading,
-    error: reportsError,
-  } = useDiagnosticReports(accessToken, patientId, refreshKey);
+    const {
+      reports,
+      loading: reportsLoading,
+      error: reportsError,
+    } = useDiagnosticReports(accessToken, patientId);
 
   // Construct processed FHIR data for analysis
   const processedFHIRData = useMemo(() => {
@@ -152,6 +153,7 @@ const Dashboard: React.FC = () => {
       <main className="container mx-auto px-4 py-8 max-w-7xl">
         <DashboardHeader isDarkMode={isDarkMode} onRefresh={handleRefresh} />
 
+      
         {/* Patient Demographics Section */}
         <section className="mb-8">
           {patientLoading ? (
@@ -183,12 +185,12 @@ const Dashboard: React.FC = () => {
             observations={observations}
             observationsLoading={observationsLoading}
             observationsError={observationsError}
-            impressions={impressions}  // ✅ Ensure impressions are passed
+            impressions={impressions}  
             impressionsLoading={ImpressionsLoading}
             impressionsError={ImpressionsError}
-  reports={reports}  // ✅ Ensure reports are passed
-  reportsLoading={reportsLoading}
-  reportsError={reportsError}
+            reports={reports}  
+            reportsLoading={reportsLoading}
+            reportsError={reportsError}
             isDarkMode={isDarkMode}
           />
         </section>
@@ -213,36 +215,27 @@ const Dashboard: React.FC = () => {
         {!analysisLoading &&
         !analysis?.clinicalAssessment?.romeIVCriteriaMet ? (
           <section className="mb-8">
-            <Card
-              className={`p-6 ${
-                isDarkMode
-                  ? "bg-gray-800 border-gray-700"
-                  : "bg-white border-gray-200"
-              }`}
-            >
+            <Card className={`p-6 ${isDarkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"}`}>
               <div className="flex items-center justify-between">
                 <div>
-                  <h2
-                    className={`text-xl font-bold ${
-                      isDarkMode ? "text-white" : "text-gray-900"
-                    }`}
-                  >
+                  <h2 className={`text-xl font-bold ${isDarkMode ? "text-white" : "text-gray-900"}`}>
                     IBS Assessment
                   </h2>
-                  <p
-                    className={`mt-1 ${
-                      isDarkMode ? "text-gray-400" : "text-gray-600"
-                    }`}
-                  >
-                    Complete the Rome IV criteria questionnaire for IBS
-                    diagnosis
+                  <p className={`mt-1 ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}>
+                    Complete the Rome IV criteria questionnaire for IBS diagnosis
                   </p>
-                </div>
-                <RomeIVQuestionnaire isDarkMode={isDarkMode} />
+                </div>         
+             <RomeIVQuestionnaire  
+  isDarkMode={isDarkMode} 
+  patientId={patientId} 
+  onSubmitSuccess={handleRefresh} 
+/>
               </div>
             </Card>
           </section>
         ) : null}
+        {/* Rome IV Questionnaire Responses Dashboard */}
+        <RomeIVDashboard patientId={patientId} />
       </main>
     </div>
   );

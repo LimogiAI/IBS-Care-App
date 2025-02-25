@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button/button";
 import {
   Dialog,
@@ -11,34 +10,52 @@ import {
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { ClipboardList, ArrowRight, ArrowLeft } from "lucide-react";
-import { questions } from "@/utils/questions";
-import { StoolFormOption } from "@/types/romeiv";
-
+import { useQuestionnaire } from "@/hooks/useQuestionnaire";
 
 interface RomeIVQuestionnaireProps {
   isDarkMode: boolean;
+  patientId: string;
+  onSubmitSuccess?: () => void; // ✅ Made it optional
 }
 
 const RomeIVQuestionnaire: React.FC<RomeIVQuestionnaireProps> = ({
   isDarkMode,
+  patientId,
+  onSubmitSuccess = () => console.log("✅ Default onSubmitSuccess called"), // ✅ Default function
 }) => {
+  const accessToken = sessionStorage.getItem("access_token") || "";
+  const questionnaireId = "5f2d6db0-4436-4026-a26a-41e5b321ff01"; // Rome IV Questionnaire ID
+  const { questionnaire, loading, error } = useQuestionnaire(accessToken, questionnaireId);
+
   const [isOpen, setIsOpen] = useState<boolean>(false);
-  const [currentSection, setCurrentSection] = useState<number>(0);
-  const [currentQuestion, setCurrentQuestion] = useState<number>(0);
+  const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
-  const totalQuestions = questions?.reduce(
-    (acc, section) => acc + section.questions.length,
-    0
-  );
-  const currentQuestionNumber =
-    questions
-      ?.slice(0, currentSection)
-      .reduce((acc, section) => acc + section.questions.length, 0) +
-    currentQuestion +
-    1;
+  // Extract all questions and ensure section headers appear above every question
+  const extractQuestionsWithSections = (items: any[]): any[] => {
+    return items.flatMap((section) =>
+      section.type === "group" && section.item
+        ? section.item.map((question: any) => ({
+            ...question,
+            sectionHeader: section.text, // ✅ Attach section title to each question
+          }))
+        : []
+    );
+  };
 
-  const progress = (currentQuestionNumber / totalQuestions) * 100;
+  const questions = questionnaire?.item ? extractQuestionsWithSections(questionnaire.item) : [];
+  const totalQuestions = questions.length;
+  const progress = totalQuestions > 0 ? ((currentIndex + 1) / totalQuestions) * 100 : 0;
+  const isAllAnswered = Object.keys(answers).length === totalQuestions;
+
+  useEffect(() => {
+    if (isOpen) {
+      setCurrentIndex(0);
+      setAnswers({});
+      setIsSubmitting(false);
+    }
+  }, [isOpen]);
 
   const handleAnswer = (questionId: string, answer: string) => {
     setAnswers((prev) => ({
@@ -49,42 +66,96 @@ const RomeIVQuestionnaire: React.FC<RomeIVQuestionnaireProps> = ({
   };
 
   const handleNext = () => {
-    if (currentQuestion < questions[currentSection].questions.length - 1) {
-      setCurrentQuestion(currentQuestion + 1);
-    } else if (currentSection < questions.length - 1) {
-      setCurrentSection(currentSection + 1);
-      setCurrentQuestion(0);
-    } else {
-      // Questionnaire completed
-      console.log("Answers:", answers);
-      setIsOpen(false);
+    if (currentIndex < totalQuestions - 1) {
+      setCurrentIndex(currentIndex + 1);
     }
   };
 
   const handlePrevious = () => {
-    if (currentQuestion > 0) {
-      setCurrentQuestion(currentQuestion - 1);
-    } else if (currentSection > 0) {
-      setCurrentSection(currentSection - 1);
-      setCurrentQuestion(questions[currentSection - 1].questions.length - 1);
+    if (currentIndex > 0) {
+      setCurrentIndex(currentIndex - 1);
     }
   };
 
-  const handleStart = () => {
-    setIsOpen(true);
-    setCurrentSection(0);
-    setCurrentQuestion(0);
-    setAnswers({});
+  const handleSubmit = async () => {
+    if (isSubmitting) return;
+    if (!isAllAnswered) {
+      console.warn("❌ Not all questions have been answered!");
+      return;
+    }
+    setIsSubmitting(true);
+
+    console.log("🚀 Submitting Questionnaire Response...");
+    console.log("🔑 Access Token:", accessToken);
+    console.log("👤 Patient ID (from props):", patientId);
+    console.log("📦 Patient ID (from sessionStorage):", sessionStorage.getItem("patientId"));
+
+    const finalPatientId = patientId || sessionStorage.getItem("patientId");
+    if (!finalPatientId) {
+      console.error("❌ Patient ID is missing! Cannot proceed.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    const apiUrl = `https://app.meldrx.com/api/fhir/3eb16078-78c9-4b9f-9974-ea89dbb34c71/QuestionnaireResponse`;
+
+    const responsePayload = {
+      resourceType: "QuestionnaireResponse",
+      questionnaire: `https://app.meldrx.com/api/fhir/3eb16078-78c9-4b9f-9974-ea89dbb34c71/Questionnaire/5f2d6db0-4436-4026-a26a-41e5b321ff01`,
+      identifier: {
+        system: "http://example.org/bristol-stool-scale",
+        value: "12345", // Dummy value
+      },
+      subject: { reference: `Patient/${finalPatientId}` },
+      status: "completed",
+      item: questions.map((q) => ({
+        linkId: q.linkId,
+        answer: answers[q.linkId] ? [{ valueString: answers[q.linkId] }] : [], // ✅ Ensures all questions are included
+      })),
+    };
+
+    console.log("📩 Payload being sent:", JSON.stringify(responsePayload, null, 2));
+
+    try {
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        headers: {
+          Accept: "application/fhir+json",
+          "Content-Type": "application/fhir+json",
+          Authorization: accessToken ? `Bearer ${accessToken}` : "",
+        },
+        body: JSON.stringify(responsePayload),
+      });
+
+      console.log("🛜 API Response Status:", response.status);
+
+      if (response.ok) {
+        const responseData = await response.json();
+        console.log("📝 Server Response:", responseData);
+
+        setTimeout(() => {
+          console.log("🛑 Closing modal...");
+          setIsOpen(false);
+          onSubmitSuccess();
+        }, 500);
+      } else {
+        console.error("❌ Failed to submit responses.");
+        const errorData = await response.text();
+        console.error("🛑 Server Error Response:", errorData);
+      }
+    } catch (error) {
+      console.error("❌ Error saving questionnaire response:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <div>
       <Button
-        onClick={handleStart}
+        onClick={() => setIsOpen(true)}
         className={`flex items-center gap-2 ${
-          isDarkMode
-            ? "bg-blue-600 hover:bg-blue-700"
-            : "bg-blue-500 hover:bg-blue-600"
+          isDarkMode ? "bg-blue-600 hover:bg-blue-700" : "bg-blue-500 hover:bg-blue-600"
         }`}
       >
         <ClipboardList className="w-5 h-5" />
@@ -97,127 +168,52 @@ const RomeIVQuestionnaire: React.FC<RomeIVQuestionnaireProps> = ({
             isDarkMode ? "bg-gray-800 text-white" : "bg-white"
           }`}
         >
-          <div className="flex flex-col h-full">
-            <div className="sticky top-0 bg-inherit z-10 pb-4">
-              <DialogHeader>
-                <DialogTitle className="text-xl font-semibold">
-                  {questions[currentSection].section}
-                </DialogTitle>
-                <DialogDescription
-                  className={isDarkMode ? "text-gray-300" : "text-gray-600"}
-                >
-                  Question {currentQuestionNumber} of {totalQuestions}
-                </DialogDescription>
-              </DialogHeader>
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold">
+              {loading ? "Loading..." : error ? "Error fetching questionnaire" : questionnaire?.title}
+            </DialogTitle>
+            <DialogDescription className={isDarkMode ? "text-gray-300" : "text-gray-600"}>
+              Question {currentIndex + 1} of {totalQuestions}
+            </DialogDescription>
+          </DialogHeader>
 
-              <div className="mt-4">
-                <Progress value={progress} className="h-2" />
-              </div>
-            </div>
+          <Progress value={progress} className="h-2 mt-4" />
 
-            <div className="flex-grow overflow-y-auto py-4">
-              <h3
-                className={`text-lg font-medium mb-4 ${
-                  isDarkMode ? "text-gray-200" : "text-gray-700"
-                }`}
-              >
-                {questions[currentSection].questions[currentQuestion].text}
-              </h3>
-            <div className="space-y-4">
-              {questions[currentSection].questions[currentQuestion].id === "stool_form" ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {(questions[currentSection].questions[currentQuestion].options as StoolFormOption[]).map(
-                    (option) => (
-                      <div
-                        key={option.value}
-                        className={`p-4 rounded-lg border cursor-pointer transition-colors ${
-                          isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"
-                        } ${
-                          answers[questions[currentSection].questions[currentQuestion].id] === option.value
-                            ? isDarkMode
-                              ? "bg-blue-600 text-white border-blue-500"
-                              : "bg-blue-500 text-white border-blue-400"
-                            : ""
-                        }`}
-                        onClick={() =>
-                          handleAnswer(
-                            questions[currentSection].questions[currentQuestion].id,
-                            option.value
-                          )
-                        }
-                      >
-                        <div className="flex flex-col items-center space-y-3">
-                          <img
-                            src={option.image}
-                            alt={`Bristol Stool Type ${option.value}`}
-                            className="w-24 h-24 object-cover rounded-md"
-                          />
-                          <h4 className="font-medium text-center">{option.value}</h4>
-                          <p className={`text-sm text-center ${
-                            isDarkMode ? "text-gray-300" : "text-gray-600"
-                          }`}>
-                            {option.description}
-                          </p>
-                        </div>
-                      </div>
-                    )
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {(questions[currentSection].questions[currentQuestion].options as string[]).map(
-                    (option) => (
-                      <Button
-                        key={option}
-                        variant="outline"
-                        className={`w-full justify-start text-left ${
-                          isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"
-                        } ${
-                          answers[
-                            questions[currentSection].questions[currentQuestion].id
-                          ] === option
-                            ? isDarkMode
-                              ? "bg-blue-600 text-white"
-                              : "bg-blue-500 text-white"
-                            : ""
-                        }`}
-                        onClick={() =>
-                          handleAnswer(
-                            questions[currentSection].questions[currentQuestion].id,
-                            option
-                          )
-                        }
-                      >
-                        {option}
-                      </Button>
-                    )
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-
-           
-            
-            <div className="sticky bottom-0 bg-inherit pt-4">
-              <DialogFooter className="flex justify-between">
+          <div className="py-4">
+            <h2 className="text-xl font-bold mb-2">{questions[currentIndex]?.sectionHeader}</h2>
+            <h3 className={`text-lg font-medium mb-4 ${isDarkMode ? "text-gray-200" : "text-gray-700"}`}>
+              {questions[currentIndex]?.text}
+            </h3>
+            <div className="space-y-2">
+              {questions[currentIndex]?.answerOption?.map((option: any) => (
                 <Button
+                  key={option.valueString}
                   variant="outline"
-                  onClick={handlePrevious}
-                  disabled={currentSection === 0 && currentQuestion === 0}
-                  className="flex items-center gap-2"
+                  className={`w-full text-left ${
+                    isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"
+                  } ${
+                    answers[questions[currentIndex]?.linkId] === option.valueString
+                      ? isDarkMode
+                        ? "bg-blue-600 text-white"
+                        : "bg-blue-500 text-white"
+                      : ""
+                  }`}
+                  onClick={() => handleAnswer(questions[currentIndex]?.linkId, option.valueString)}
                 >
-                  <ArrowLeft className="w-4 h-4" />
-                  Previous
+                  {option.valueString}
                 </Button>
-                <Button onClick={handleNext} className="flex items-center gap-2">
-                  Next
-                  <ArrowRight className="w-4 h-4" />
-                </Button>
-              </DialogFooter>
+              ))}
             </div>
-
           </div>
+
+          <DialogFooter className="flex justify-between mt-6">
+            <Button onClick={handlePrevious} disabled={currentIndex === 0}>
+              <ArrowLeft className="w-4 h-4" /> Previous
+            </Button>
+            <Button onClick={handleSubmit} disabled={!isAllAnswered || isSubmitting}>
+              {isSubmitting ? "Submitting..." : "Submit"} <ArrowRight className="w-4 h-4" />
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
