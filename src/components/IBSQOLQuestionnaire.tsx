@@ -15,15 +15,27 @@ import {
   ArrowLeft,
   CheckCircle,
 } from "lucide-react";
-import { questions } from "@/utils/questions";
-import { StoolFormOption } from "@/types/romeiv";
+import { ibsQOLQuestions } from "../utils/qol-questions";
+import IBSPredictionResult from "./IBSPredictionResult"; // New component
+import { LoadingIndicator } from "./LoadingIndicator";
 
-interface RomeIVQuestionnaireProps {
+interface IBSQOLQuestionnaireProps {
   isDarkMode: boolean;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  processedFHIRData?: any;
 }
 
-const RomeIVQuestionnaire: React.FC<RomeIVQuestionnaireProps> = ({
+const ratingOptions = [
+  { value: "1", label: "Not at all" },
+  { value: "2", label: "Slightly" },
+  { value: "3", label: "Moderately" },
+  { value: "4", label: "Quite a bit" },
+  { value: "5", label: "Extremely" },
+];
+
+const IBSQOLQuestionnaire: React.FC<IBSQOLQuestionnaireProps> = ({
   isDarkMode,
+  processedFHIRData,
 }) => {
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [currentSection, setCurrentSection] = useState<number>(0);
@@ -31,13 +43,17 @@ const RomeIVQuestionnaire: React.FC<RomeIVQuestionnaireProps> = ({
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [isReviewing, setIsReviewing] = useState<boolean>(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState<boolean>(false);
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false); // New: Loading state
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [predictionResult, setPredictionResult] = useState<any | null>(null); // New: Store prediction
 
-  const totalQuestions = questions.reduce(
+  const totalQuestions = ibsQOLQuestions.reduce(
     (acc, section) => acc + section.questions.length,
     0
   );
   const currentQuestionNumber =
-    questions
+    ibsQOLQuestions
       .slice(0, currentSection)
       .reduce((acc, section) => acc + section.questions.length, 0) +
     currentQuestion +
@@ -48,19 +64,17 @@ const RomeIVQuestionnaire: React.FC<RomeIVQuestionnaireProps> = ({
     : (currentQuestionNumber / totalQuestions) * 100;
 
   const handleAnswer = (questionId: string, answer: string) => {
-    setAnswers((prev) => ({
-      ...prev,
-      [questionId]: answer,
-    }));
-    if (!isReviewing) {
-      handleNext();
-    }
+    setAnswers((prev) => ({ ...prev, [questionId]: answer }));
+    if (!isReviewing) handleNext();
   };
 
   const handleNext = () => {
-    if (currentQuestion < questions[currentSection].questions.length - 1) {
+    if (
+      currentQuestion <
+      ibsQOLQuestions[currentSection].questions.length - 1
+    ) {
       setCurrentQuestion(currentQuestion + 1);
-    } else if (currentSection < questions.length - 1) {
+    } else if (currentSection < ibsQOLQuestions.length - 1) {
       setCurrentSection(currentSection + 1);
       setCurrentQuestion(0);
     } else {
@@ -71,13 +85,17 @@ const RomeIVQuestionnaire: React.FC<RomeIVQuestionnaireProps> = ({
   const handlePrevious = () => {
     if (isReviewing) {
       setIsReviewing(false);
-      setCurrentSection(questions.length - 1);
-      setCurrentQuestion(questions[questions.length - 1].questions.length - 1);
+      setCurrentSection(ibsQOLQuestions.length - 1);
+      setCurrentQuestion(
+        ibsQOLQuestions[ibsQOLQuestions.length - 1].questions.length - 1
+      );
     } else if (currentQuestion > 0) {
       setCurrentQuestion(currentQuestion - 1);
     } else if (currentSection > 0) {
       setCurrentSection(currentSection - 1);
-      setCurrentQuestion(questions[currentSection - 1].questions.length - 1);
+      setCurrentQuestion(
+        ibsQOLQuestions[currentSection - 1].questions.length - 1
+      );
     }
   };
 
@@ -88,26 +106,64 @@ const RomeIVQuestionnaire: React.FC<RomeIVQuestionnaireProps> = ({
     setAnswers({});
     setIsReviewing(false);
     setShowConfirmDialog(false);
+    setSubmissionError(null);
+    setIsSubmitting(false);
+    setPredictionResult(null);
   };
 
   const handleSubmit = () => {
     setShowConfirmDialog(true);
   };
 
-  const handleConfirmSubmit = () => {
-    console.log("Final Answers Submitted to FHIR:", answers);
-    setShowConfirmDialog(false);
-    setIsOpen(false);
-    // Here you would typically call an API to update the FHIR patient data
+  const handleConfirmSubmit = async () => {
+    if (!processedFHIRData) {
+      setSubmissionError("No FHIR data available for prediction");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSubmissionError(null);
+
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL_ANALYSIS_PREDICTION}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            fhirData: processedFHIRData,
+            qolResponses: answers,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`API error: ${await response.text()}`);
+      }
+
+      const prediction = await response.json();
+      setPredictionResult(prediction);
+      setShowConfirmDialog(false);
+    } catch (error) {
+      console.error("Submission Error:", error);
+      setSubmissionError(
+        "Failed to submit data to Predictability AI. Please try again."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleCancelSubmit = () => {
     setShowConfirmDialog(false);
+    setSubmissionError(null);
   };
 
   const renderReviewSummary = () => (
     <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-4">
-      {questions.map((section, sectionIndex) => (
+      {ibsQOLQuestions.map((section, sectionIndex) => (
         <div key={section.section}>
           <h3
             className={`text-lg font-semibold mb-3 ${
@@ -139,7 +195,11 @@ const RomeIVQuestionnaire: React.FC<RomeIVQuestionnaireProps> = ({
                     : "text-red-500"
                 }`}
               >
-                {answers[question.id] || "Not answered"}
+                {answers[question.id]
+                  ? ratingOptions.find(
+                      (opt) => opt.value === answers[question.id]
+                    )?.label
+                  : "Not answered"}
               </p>
               <Button
                 variant="ghost"
@@ -171,87 +231,47 @@ const RomeIVQuestionnaire: React.FC<RomeIVQuestionnaireProps> = ({
           isDarkMode ? "text-gray-200" : "text-gray-700"
         }`}
       >
-        {questions[currentSection].questions[currentQuestion].text}
+        {ibsQOLQuestions[currentSection].questions[currentQuestion].text}
       </h3>
       <div className="space-y-2">
-        {questions[currentSection].questions[currentQuestion].id ===
-        "stool_form" ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {(
-              questions[currentSection].questions[currentQuestion]
-                .options as StoolFormOption[]
-            ).map((option) => (
-              <div
-                key={option.value}
-                className={`p-4 rounded-lg border cursor-pointer transition-colors ${
-                  isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"
-                } ${
-                  answers[
-                    questions[currentSection].questions[currentQuestion].id
-                  ] === option.value
-                    ? isDarkMode
-                      ? "bg-blue-600 text-white border-blue-500"
-                      : "bg-blue-500 text-white border-blue-400"
-                    : ""
-                }`}
-                onClick={() =>
-                  handleAnswer(
-                    questions[currentSection].questions[currentQuestion].id,
-                    option.value
-                  )
-                }
-              >
-                <div className="flex flex-col items-center space-y-3">
-                  <img
-                    src={option.image}
-                    alt={`Bristol Stool Type ${option.value}`}
-                    className="w-24 h-24 object-cover rounded-md"
-                  />
-                  <h4 className="font-medium text-center">{option.value}</h4>
-                  <p
-                    className={`text-sm text-center ${
-                      isDarkMode ? "text-gray-300" : "text-gray-600"
-                    }`}
-                  >
-                    {option.description}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          (
-            questions[currentSection].questions[currentQuestion]
-              .options as string[]
-          ).map((option) => (
-            <Button
-              key={option}
-              variant="outline"
-              className={`w-full justify-start text-left ${
-                isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"
-              } ${
-                answers[
-                  questions[currentSection].questions[currentQuestion].id
-                ] === option
-                  ? isDarkMode
-                    ? "bg-blue-600 text-white"
-                    : "bg-blue-500 text-white"
-                  : ""
-              }`}
-              onClick={() =>
-                handleAnswer(
-                  questions[currentSection].questions[currentQuestion].id,
-                  option
-                )
-              }
-            >
-              {option}
-            </Button>
-          ))
-        )}
+        {ratingOptions.map((option) => (
+          <Button
+            key={option.value}
+            variant="outline"
+            className={`w-full justify-start text-left ${
+              isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"
+            } ${
+              answers[
+                ibsQOLQuestions[currentSection].questions[currentQuestion].id
+              ] === option.value
+                ? isDarkMode
+                  ? "bg-blue-600 text-white"
+                  : "bg-blue-500 text-white"
+                : ""
+            }`}
+            onClick={() =>
+              handleAnswer(
+                ibsQOLQuestions[currentSection].questions[currentQuestion].id,
+                option.value
+              )
+            }
+          >
+            {option.value} - {option.label}
+          </Button>
+        ))}
       </div>
     </div>
   );
+
+  if (predictionResult) {
+    return (
+      <IBSPredictionResult
+        isDarkMode={isDarkMode}
+        prediction={predictionResult}
+        onRestart={handleStart}
+      />
+    );
+  }
 
   return (
     <div>
@@ -264,7 +284,7 @@ const RomeIVQuestionnaire: React.FC<RomeIVQuestionnaireProps> = ({
         }`}
       >
         <ClipboardList className="w-5 h-5" />
-        Launch Rome IV Questionnaire
+        Launch IBS-QOL Questionnaire
       </Button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -278,14 +298,14 @@ const RomeIVQuestionnaire: React.FC<RomeIVQuestionnaireProps> = ({
               <DialogHeader>
                 <DialogTitle className="text-xl font-semibold">
                   {isReviewing
-                    ? "Review Your Answers"
-                    : questions[currentSection].section}
+                    ? "Review Your IBS-QOL Answers"
+                    : ibsQOLQuestions[currentSection].section}
                 </DialogTitle>
                 <DialogDescription
                   className={isDarkMode ? "text-gray-300" : "text-gray-600"}
                 >
                   {isReviewing
-                    ? "Please review all answers below"
+                    ? "Please review all answers below (1 = Not at all, 5 = Extremely)"
                     : `Question ${currentQuestionNumber} of ${totalQuestions}`}
                 </DialogDescription>
               </DialogHeader>
@@ -295,39 +315,47 @@ const RomeIVQuestionnaire: React.FC<RomeIVQuestionnaireProps> = ({
             </div>
 
             <div className="flex-grow overflow-y-auto py-4">
-              {isReviewing ? renderReviewSummary() : renderQuestion()}
+              {isSubmitting ? (
+                <LoadingIndicator isDarkMode={isDarkMode} />
+              ) : isReviewing ? (
+                renderReviewSummary()
+              ) : (
+                renderQuestion()
+              )}
             </div>
 
-            <div className="sticky bottom-0 bg-inherit pt-4">
-              <DialogFooter className="flex justify-between">
-                <Button
-                  variant="outline"
-                  onClick={handlePrevious}
-                  disabled={currentSection === 0 && currentQuestion === 0}
-                  className="flex items-center gap-2"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                  {isReviewing ? "Back to Questions" : "Previous"}
-                </Button>
-                {isReviewing ? (
+            {!isSubmitting && (
+              <div className="sticky bottom-0 bg-inherit pt-4">
+                <DialogFooter className="flex justify-between">
                   <Button
-                    onClick={handleSubmit}
+                    variant="outline"
+                    onClick={handlePrevious}
+                    disabled={currentSection === 0 && currentQuestion === 0}
                     className="flex items-center gap-2"
                   >
-                    <CheckCircle className="w-4 h-4" />
-                    Submit
+                    <ArrowLeft className="w-4 h-4" />
+                    {isReviewing ? "Back to Questions" : "Previous"}
                   </Button>
-                ) : (
-                  <Button
-                    onClick={handleNext}
-                    className="flex items-center gap-2"
-                  >
-                    Next
-                    <ArrowRight className="w-4 h-4" />
-                  </Button>
-                )}
-              </DialogFooter>
-            </div>
+                  {isReviewing ? (
+                    <Button
+                      onClick={handleSubmit}
+                      className="flex items-center gap-2"
+                    >
+                      <CheckCircle className="w-4 h-4" />
+                      Submit
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={handleNext}
+                      className="flex items-center gap-2"
+                    >
+                      Next
+                      <ArrowRight className="w-4 h-4" />
+                    </Button>
+                  )}
+                </DialogFooter>
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
@@ -346,10 +374,13 @@ const RomeIVQuestionnaire: React.FC<RomeIVQuestionnaireProps> = ({
             <DialogDescription
               className={isDarkMode ? "text-gray-300" : "text-gray-600"}
             >
-              Submitting this questionnaire will update the patient's FHIR
-              QuestionnaireResponse resource. This data will be stored in the
-              patient's clinical record and may be used for diagnostic and
-              treatment purposes. Are you sure you want to proceed?
+              Submitting this questionnaire will send your Quality of Life
+              responses and FHIR data to the Predictability AI for analysis. The
+              results will be stored and may influence future treatment
+              recommendations. Are you sure you want to proceed?
+              {submissionError && (
+                <p className="text-red-500 mt-2">{submissionError}</p>
+              )}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex justify-end gap-2">
@@ -357,6 +388,7 @@ const RomeIVQuestionnaire: React.FC<RomeIVQuestionnaireProps> = ({
               variant="outline"
               onClick={handleCancelSubmit}
               className={isDarkMode ? "text-gray-300" : "text-gray-600"}
+              disabled={isSubmitting}
             >
               Cancel
             </Button>
@@ -367,8 +399,9 @@ const RomeIVQuestionnaire: React.FC<RomeIVQuestionnaireProps> = ({
                   ? "bg-blue-600 hover:bg-blue-700"
                   : "bg-blue-500 hover:bg-blue-600"
               }`}
+              disabled={isSubmitting}
             >
-              Confirm
+              {isSubmitting ? "Submitting..." : "Confirm"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -377,4 +410,4 @@ const RomeIVQuestionnaire: React.FC<RomeIVQuestionnaireProps> = ({
   );
 };
 
-export default RomeIVQuestionnaire;
+export default IBSQOLQuestionnaire;

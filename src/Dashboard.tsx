@@ -18,6 +18,7 @@ import ClinicalDataSection from "./components/clinical/ClinicalDataComponents";
 import IBSAnalysisDashboard from "./components/IBSAnalysisDashboard";
 import RomeIVQuestionnaire from "./components/RomeIVQuestionnaire";
 import { useClinicalImpressions } from "./hooks/useClinicalImpressions";
+import IBSQOLQuestionnaire from "./components/IBSQOLQuestionnaire";
 
 const Dashboard: React.FC = () => {
   const { isDarkMode, handleThemeToggle } = useTheme();
@@ -143,7 +144,6 @@ const Dashboard: React.FC = () => {
 
       <main className="container mx-auto px-4 py-8 max-w-7xl">
         <DashboardHeader isDarkMode={isDarkMode} onRefresh={handleRefresh} />
-
         {/* Patient Demographics Section */}
         <section className="mb-8">
           {patientLoading ? (
@@ -165,7 +165,6 @@ const Dashboard: React.FC = () => {
             </p>
           )}
         </section>
-
         {/* Clinical Data Section */}
         <section className="mb-8">
           <ClinicalDataSection
@@ -175,13 +174,12 @@ const Dashboard: React.FC = () => {
             observations={observations}
             observationsLoading={observationsLoading}
             observationsError={observationsError}
-            impressions={impressions}  // ✅ Ensure impressions are passed
+            impressions={impressions} // ✅ Ensure impressions are passed
             impressionsLoading={ImpressionsLoading}
             impressionsError={ImpressionsError}
             isDarkMode={isDarkMode}
           />
         </section>
-
         {/* IBS Analysis Dashboard */}
         {processedFHIRData && (
           <section className="mb-8">
@@ -197,7 +195,6 @@ const Dashboard: React.FC = () => {
             ) : null}
           </section>
         )}
-
         {/* Rome IV Questionnaire Section */}
         {!analysisLoading &&
         !analysis?.clinicalAssessment?.romeIVCriteriaMet ? (
@@ -232,6 +229,35 @@ const Dashboard: React.FC = () => {
             </Card>
           </section>
         ) : null}
+        <section className="mb-8">
+          <Card
+            className={`p-6 ${
+              isDarkMode
+                ? "bg-gray-800 border-gray-700"
+                : "bg-white border-gray-200"
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <h2
+                  className={`text-xl font-bold ${
+                    isDarkMode ? "text-white" : "text-gray-900"
+                  }`}
+                >
+                  IBS Quality of Life Assessment
+                </h2>
+                <p
+                  className={`mt-1 ${
+                    isDarkMode ? "text-gray-400" : "text-gray-600"
+                  }`}
+                >
+                  Complete the IBS-QOL questionnaire for predictability analysis
+                </p>
+              </div>
+              <IBSQOLQuestionnaire isDarkMode={isDarkMode} processedFHIRData={processedFHIRData} />
+            </div>
+          </Card>
+        </section>
       </main>
     </div>
   );
