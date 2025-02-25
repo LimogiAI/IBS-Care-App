@@ -23,6 +23,7 @@ export interface FHIRQuestionnaireResponse extends fhirclient.FHIR.Resource {
             // and so on...
         }>;
         // Possibly nested sub-items
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         item?: any; // nested items if needed
     }>;
 }
