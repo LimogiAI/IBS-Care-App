@@ -19,6 +19,7 @@ import IBSAnalysisDashboard from "./components/IBSAnalysisDashboard";
 import RomeIVQuestionnaire from "./components/RomeIVQuestionnaire";
 import { useClinicalImpressions } from "./hooks/useClinicalImpressions";
 import IBSQOLQuestionnaire from "./components/IBSQOLQuestionnaire";
+import { useDiagnosticReports } from "./hooks/useDiagnosticReports";
 
 const Dashboard: React.FC = () => {
   const { isDarkMode, handleThemeToggle } = useTheme();
@@ -71,6 +72,12 @@ const Dashboard: React.FC = () => {
     loading: ImpressionsLoading,
     error: ImpressionsError,
   } = useClinicalImpressions(accessToken, patientId, refreshKey);
+
+  const {
+    reports,
+    loading: reportsLoading,
+    error: reportsError,
+  } = useDiagnosticReports(accessToken, patientId);
 
   // Construct processed FHIR data for analysis
   const processedFHIRData = useMemo(() => {
@@ -174,9 +181,12 @@ const Dashboard: React.FC = () => {
             observations={observations}
             observationsLoading={observationsLoading}
             observationsError={observationsError}
-            impressions={impressions} // ✅ Ensure impressions are passed
+            impressions={impressions} 
             impressionsLoading={ImpressionsLoading}
             impressionsError={ImpressionsError}
+            reports={reports}  
+            reportsLoading={reportsLoading}
+            reportsError={reportsError}
             isDarkMode={isDarkMode}
           />
         </section>
