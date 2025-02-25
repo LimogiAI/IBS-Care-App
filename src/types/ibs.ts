@@ -67,38 +67,11 @@ export interface IBSAssessment {
       confidenceLevel: string;
     };
   }
-  
   export interface ProcessedFHIRData {
     patient: {
       id: string;
       gender?: string;
       age?: number;
-    };
-    ibsSymptoms: {
-      abdominalPain?: Array<{
-        value: number;
-        date: string;
-        duration?: number;
-        frequency?: number;
-        system?: string;
-        code?: string;
-        display?: string;
-      }>;
-      bloating?: Array<{
-        value: number;
-        date: string;
-        type: "bloating" | "distension";
-      }>;
-      stoolCharacteristics?: Array<{
-        type: number;
-        date: string;
-        frequency?: number;
-      }>;
-      associatedSymptoms?: Array<{
-        type: string;
-        value: number;
-        date: string;
-      }>;
     };
     relevantConditions: Array<{
       code: string;
@@ -106,26 +79,72 @@ export interface IBSAssessment {
       onset: string;
       status: string;
     }>;
-    encounters: Array<{
-      type: string;
-      date: string;
-      diagnoses?: string[];
-    }>;
-    tasks?: Array<{
+    relevantObservations: Array<{
       id: string;
-      status: string;
-      intent: string;
-      description: string;
-      authoredOn: string;
-      lastModified: string;
-    }>;
-    allergies?: Array<{
       code: string;
-      display: string;
-      category: string;
-      type: string;
-      criticality: string;
-      onset: string;
+      value: string;
+      effectiveDateTime: string;
     }>;
   }
+  
+  // export interface ProcessedFHIRData {
+  //   patient: {
+  //     id: string;
+  //     gender?: string;
+  //     age?: number;
+  //   };
+  //   ibsSymptoms: {
+  //     abdominalPain?: Array<{
+  //       value: number;
+  //       date: string;
+  //       duration?: number;
+  //       frequency?: number;
+  //       system?: string;
+  //       code?: string;
+  //       display?: string;
+  //     }>;
+  //     bloating?: Array<{
+  //       value: number;
+  //       date: string;
+  //       type: "bloating" | "distension";
+  //     }>;
+  //     stoolCharacteristics?: Array<{
+  //       type: number;
+  //       date: string;
+  //       frequency?: number;
+  //     }>;
+  //     associatedSymptoms?: Array<{
+  //       type: string;
+  //       value: number;
+  //       date: string;
+  //     }>;
+  //   };
+  //   relevantConditions: Array<{
+  //     code: string;
+  //     display: string;
+  //     onset: string;
+  //     status: string;
+  //   }>;
+  //   encounters: Array<{
+  //     type: string;
+  //     date: string;
+  //     diagnoses?: string[];
+  //   }>;
+  //   tasks?: Array<{
+  //     id: string;
+  //     status: string;
+  //     intent: string;
+  //     description: string;
+  //     authoredOn: string;
+  //     lastModified: string;
+  //   }>;
+  //   allergies?: Array<{
+  //     code: string;
+  //     display: string;
+  //     category: string;
+  //     type: string;
+  //     criticality: string;
+  //     onset: string;
+  //   }>;
+  // }
   

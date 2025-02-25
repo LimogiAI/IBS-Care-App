@@ -1,27 +1,9 @@
 // src/hooks/useIBSAnalysis.tsx
 import { useState, useEffect, useCallback } from 'react';
 import debounce from 'lodash/debounce';
-import { IBSAssessment } from '../types/ibs';
+import { IBSAssessment, ProcessedFHIRData } from '../types/ibs';
 
-export interface ProcessedFHIRData {
-  patient: {
-    id: string;
-    gender?: string;
-    age?: number;
-  };
-  relevantConditions: Array<{
-    code: string;
-    display: string;
-    onset: string;
-    status: string;
-  }>;
-  relevantObservations: Array<{
-    id: string;
-    code: string;
-    value: string;
-    effectiveDateTime: string;
-  }>;
-}
+
 
 export function useIBSAnalysis(processedFHIRData: ProcessedFHIRData | null) {
   const [analysis, setAnalysis] = useState<IBSAssessment | null>(null);
