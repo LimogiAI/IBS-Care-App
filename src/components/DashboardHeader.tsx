@@ -17,7 +17,7 @@ interface DashboardHeaderProps {
         <p className={`mt-2 ${
           isDarkMode ? 'text-gray-400' : 'text-gray-600'
         }`}>
-          Comprehensive patient overview and real-time analysis
+          Comprehensive patient IBS overview and AI analysis
         </p>
       </div>
       <button
