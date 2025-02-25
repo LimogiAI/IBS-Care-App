@@ -35,7 +35,7 @@ export const login = async () => {
     });
 
     await userManager.signinRedirect({
-      scope: "openid profile launch patient/*.read",
+      scope: "openid profile launch patient/*.read patient/*.*",
       extraQueryParams,
     });
   }

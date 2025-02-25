@@ -16,7 +16,7 @@ import {
   CheckCircle,
 } from "lucide-react";
 import { ibsQOLQuestions } from "../utils/qol-questions";
-import IBSPredictionResult from "./IBSPredictionResult"; // New component
+import IBSPredictionResult from "./IBSPredictionResult";
 import { LoadingIndicator } from "./LoadingIndicator";
 
 interface IBSQOLQuestionnaireProps {

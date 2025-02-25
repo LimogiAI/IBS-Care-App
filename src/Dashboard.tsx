@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { ToastProvider } from "@/components/ui/toast";
 import { Card } from "@/components/ui/card";
 import Header from "./components/Header";
 import PatientCard from "./components/PatientCard";
@@ -20,6 +21,8 @@ import RomeIVQuestionnaire from "./components/RomeIVQuestionnaire";
 import { useClinicalImpressions } from "./hooks/useClinicalImpressions";
 import IBSQOLQuestionnaire from "./components/IBSQOLQuestionnaire";
 import { useDiagnosticReports } from "./hooks/useDiagnosticReports";
+import { useQuestionnaireResponses } from "./hooks/useQuestionnaireResponse";
+
 
 const Dashboard: React.FC = () => {
   const { isDarkMode, handleThemeToggle } = useTheme();
@@ -69,8 +72,8 @@ const Dashboard: React.FC = () => {
 
   const {
     impressions,
-    loading: ImpressionsLoading,
-    error: ImpressionsError,
+    loading: impressionsLoading,
+    error: impressionsError,
   } = useClinicalImpressions(accessToken, patientId, refreshKey);
 
   const {
@@ -79,13 +82,22 @@ const Dashboard: React.FC = () => {
     error: reportsError,
   } = useDiagnosticReports(accessToken, patientId);
 
+  const {
+    responses,
+    loading: responsesLoading,
+    error: responsesError,
+  } = useQuestionnaireResponses(accessToken, patientId, refreshKey);
+
   // Construct processed FHIR data for analysis
   const processedFHIRData = useMemo(() => {
     if (
       !patient ||
       patientLoading ||
       conditionsLoading ||
-      observationsLoading
+      observationsLoading ||
+      impressionsLoading ||
+      reportsLoading ||
+      responsesLoading
     ) {
       return null; // Wait until all data is fully loaded
     }
@@ -107,19 +119,46 @@ const Dashboard: React.FC = () => {
         value: observation.value,
         effectiveDateTime: observation.effectiveDateTime,
       })),
+      relevantClinicalImpressions: impressions.map((impression) => ({
+        id: impression.id,
+        status: impression.status,
+        description: impression.description,
+        effectiveDateTime: impression.effectiveDateTime || impression.date,
+      })),
+      relevantDiagnosticReports: reports.map((report) => ({
+        id: report.id,
+        status: report.status,
+        conclusion: report.conclusion,
+        effectiveDateTime: report.effectiveDateTime,
+      })),
+      relevantQuestionnaireResponses: responses.map((response) => ({
+        id: response.id,
+        questionnaireRef: response.questionnaireRef,
+        authored: response.encounterPeriodStart,
+        questions: response.questions.map((q) => ({
+          linkId: q.linkId,
+          questionText: q.questionText,
+          answers: q.answers,
+        })),
+      })),
     };
   }, [
     patient,
     conditions,
     observations,
+    impressions,
+    reports,
+    responses,
     patientLoading,
     conditionsLoading,
     observationsLoading,
+    impressionsLoading,
+    reportsLoading,
+    responsesLoading,
   ]);
 
   console.log({ processedFHIRData }, "Processed FHIR Data for AI");
 
-  // Use the IBS Analysis hook only when data is ready
   const {
     analysis,
     loading: analysisLoading,
@@ -137,78 +176,112 @@ const Dashboard: React.FC = () => {
   };
 
   return (
-    <div
-      className={`min-h-screen transition-colors duration-200 ${
-        isDarkMode ? "bg-gray-900" : "bg-gray-50"
-      }`}
-    >
-      <Header
-        physicianName={user?.name || "Physician"}
-        onLogout={handleLogout}
-        isDarkMode={isDarkMode}
-        onThemeToggle={handleThemeToggle}
-      />
+    <ToastProvider>
+      <div
+        className={`min-h-screen transition-colors duration-200 ${
+          isDarkMode ? "bg-gray-900" : "bg-gray-50"
+        }`}
+      >
+        <Header
+          physicianName={user?.name || "Physician"}
+          onLogout={handleLogout}
+          isDarkMode={isDarkMode}
+          onThemeToggle={handleThemeToggle}
+        />
 
-      <main className="container mx-auto px-4 py-8 max-w-7xl">
-        <DashboardHeader isDarkMode={isDarkMode} onRefresh={handleRefresh} />
-        {/* Patient Demographics Section */}
-        <section className="mb-8">
-          {patientLoading ? (
-            <LoadingIndicator isDarkMode={isDarkMode} />
-          ) : patientError ? (
-            <ErrorMessage message={patientError} isDarkMode={isDarkMode} />
-          ) : patient ? (
-            <PatientCard
-              fullName={patient.fullName}
-              gender={patient.gender}
-              birthDate={patient.birthDate}
-              address={patient.address || "N/A"}
-              contact={patient.contact || "N/A"}
+        <main className="container mx-auto px-4 py-8 max-w-7xl">
+          <DashboardHeader isDarkMode={isDarkMode} onRefresh={handleRefresh} />
+          {/* Patient Demographics Section */}
+          <section className="mb-8">
+            {patientLoading ? (
+              <LoadingIndicator isDarkMode={isDarkMode} />
+            ) : patientError ? (
+              <ErrorMessage message={patientError} isDarkMode={isDarkMode} />
+            ) : patient ? (
+              <PatientCard
+                fullName={patient.fullName}
+                gender={patient.gender}
+                birthDate={patient.birthDate}
+                address={patient.address || "N/A"}
+                contact={patient.contact || "N/A"}
+                isDarkMode={isDarkMode}
+              />
+            ) : (
+              <p className={isDarkMode ? "text-gray-400" : "text-gray-600"}>
+                No patient data available.
+              </p>
+            )}
+          </section>
+          {/* Clinical Data Section */}
+          <section className="mb-8">
+            <ClinicalDataSection
+              conditions={conditions}
+              conditionsLoading={conditionsLoading}
+              conditionsError={conditionsError}
+              observations={observations}
+              observationsLoading={observationsLoading}
+              observationsError={observationsError}
+              impressions={impressions}
+              impressionsLoading={impressionsLoading}
+              impressionsError={impressionsError}
+              reports={reports}
+              reportsLoading={reportsLoading}
+              reportsError={reportsError}
+              responses={responses}
+              responsesLoading={responsesLoading}
+              responsesError={responsesError}
               isDarkMode={isDarkMode}
             />
-          ) : (
-            <p className={isDarkMode ? "text-gray-400" : "text-gray-600"}>
-              No patient data available.
-            </p>
-          )}
-        </section>
-        {/* Clinical Data Section */}
-        <section className="mb-8">
-          <ClinicalDataSection
-            conditions={conditions}
-            conditionsLoading={conditionsLoading}
-            conditionsError={conditionsError}
-            observations={observations}
-            observationsLoading={observationsLoading}
-            observationsError={observationsError}
-            impressions={impressions} 
-            impressionsLoading={ImpressionsLoading}
-            impressionsError={ImpressionsError}
-            reports={reports}  
-            reportsLoading={reportsLoading}
-            reportsError={reportsError}
-            isDarkMode={isDarkMode}
-          />
-        </section>
-        {/* IBS Analysis Dashboard */}
-        {processedFHIRData && (
-          <section className="mb-8">
-            {analysisLoading ? (
-              <LoadingIndicator isDarkMode={isDarkMode} />
-            ) : analysisError ? (
-              <ErrorMessage message={analysisError} isDarkMode={isDarkMode} />
-            ) : analysis ? (
-              <IBSAnalysisDashboard
-                isDarkMode={isDarkMode}
-                analysis={analysis}
-              />
-            ) : null}
           </section>
-        )}
-        {/* Rome IV Questionnaire Section */}
-        {!analysisLoading &&
-        !analysis?.clinicalAssessment?.romeIVCriteriaMet ? (
-          <section className="mb-8">
+          {/* IBS Analysis Dashboard */}
+          {processedFHIRData && (
+            <section className="mb-8">
+              {analysisLoading ? (
+                <LoadingIndicator isDarkMode={isDarkMode} />
+              ) : analysisError ? (
+                <ErrorMessage message={analysisError} isDarkMode={isDarkMode} />
+              ) : analysis ? (
+                <IBSAnalysisDashboard
+                  isDarkMode={isDarkMode}
+                  analysis={analysis}
+                />
+              ) : null}
+            </section>
+          )}
+          {/* Rome IV Questionnaire Section */}
+          {!analysisLoading ? (
+            <section className="mb-8">
+              <Card
+                className={`p-6 ${
+                  isDarkMode
+                    ? "bg-gray-800 border-gray-700"
+                    : "bg-white border-gray-200"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2
+                      className={`text-xl font-bold ${
+                        isDarkMode ? "text-white" : "text-gray-900"
+                      }`}
+                    >
+                      IBS Assessment
+                    </h2>
+                    <p
+                      className={`mt-1 ${
+                        isDarkMode ? "text-gray-400" : "text-gray-600"
+                      }`}
+                    >
+                      Complete the Rome IV criteria questionnaire for IBS
+                      diagnosis
+                    </p>
+                  </div>
+                  <RomeIVQuestionnaire isDarkMode={isDarkMode} />
+                </div>
+              </Card>
+            </section>
+          ) : null}
+          {!analysisLoading ? (<section className="mb-8">
             <Card
               className={`p-6 ${
                 isDarkMode
@@ -223,53 +296,29 @@ const Dashboard: React.FC = () => {
                       isDarkMode ? "text-white" : "text-gray-900"
                     }`}
                   >
-                    IBS Assessment
+                    IBS Quality of Life Assessment
                   </h2>
                   <p
                     className={`mt-1 ${
                       isDarkMode ? "text-gray-400" : "text-gray-600"
                     }`}
                   >
-                    Complete the Rome IV criteria questionnaire for IBS
-                    diagnosis
+                    Complete the IBS-QOL questionnaire for predictability analysis
                   </p>
                 </div>
-                <RomeIVQuestionnaire isDarkMode={isDarkMode} />
+                <IBSQOLQuestionnaire
+                  isDarkMode={isDarkMode}
+                  processedFHIRData={processedFHIRData}
+                />
               </div>
             </Card>
-          </section>
-        ) : null}
-        <section className="mb-8">
-          <Card
-            className={`p-6 ${
-              isDarkMode
-                ? "bg-gray-800 border-gray-700"
-                : "bg-white border-gray-200"
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <h2
-                  className={`text-xl font-bold ${
-                    isDarkMode ? "text-white" : "text-gray-900"
-                  }`}
-                >
-                  IBS Quality of Life Assessment
-                </h2>
-                <p
-                  className={`mt-1 ${
-                    isDarkMode ? "text-gray-400" : "text-gray-600"
-                  }`}
-                >
-                  Complete the IBS-QOL questionnaire for predictability analysis
-                </p>
-              </div>
-              <IBSQOLQuestionnaire isDarkMode={isDarkMode} processedFHIRData={processedFHIRData} />
-            </div>
-          </Card>
-        </section>
-      </main>
-    </div>
+          </section>):null
+
+          }
+          
+        </main>
+      </div>
+    </ToastProvider>
   );
 };
 

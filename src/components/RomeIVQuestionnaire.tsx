@@ -1,3 +1,5 @@
+
+// export default RomeIVQuestionnaire;
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button/button";
 import {
@@ -14,23 +16,35 @@ import {
   ArrowRight,
   ArrowLeft,
   CheckCircle,
+  Loader2,
 } from "lucide-react";
 import { questions } from "@/utils/questions";
 import { StoolFormOption } from "@/types/romeiv";
+// Assuming you have a toast component; if not, see the example below
+import { useToast } from "@/components/ui/toast";
 
 interface RomeIVQuestionnaireProps {
   isDarkMode: boolean;
 }
 
+const QUESTIONNAIRE_URL = import.meta.env.QUESTIONNAIRE_URL || 'https://app.meldrx.com/api/fhir/3eb16078-78c9-4b9f-9974-ea89dbb34c71/Questionnaire/fe7cb8b0-b68d-4b86-b624-6cb83cd0d429'
+
+const QUESTIONNAIRE_RESPONSE_URL = import.meta.env.QUESTIONNAIRE_RESPONSE_URL || 'https://app.meldrx.com/api/fhir/3eb16078-78c9-4b9f-9974-ea89dbb34c71/QuestionnaireResponse/'
+
+
+
 const RomeIVQuestionnaire: React.FC<RomeIVQuestionnaireProps> = ({
   isDarkMode,
 }) => {
+  const { toast } = useToast(); // Hook for toast notifications
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [currentSection, setCurrentSection] = useState<number>(0);
   const [currentQuestion, setCurrentQuestion] = useState<number>(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [isReviewing, setIsReviewing] = useState<boolean>(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState<boolean>(false);
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false); // New loading state
 
   const totalQuestions = questions.reduce(
     (acc, section) => acc + section.questions.length,
@@ -88,21 +102,95 @@ const RomeIVQuestionnaire: React.FC<RomeIVQuestionnaireProps> = ({
     setAnswers({});
     setIsReviewing(false);
     setShowConfirmDialog(false);
+    setSubmissionError(null);
+    setIsSubmitting(false);
   };
 
   const handleSubmit = () => {
     setShowConfirmDialog(true);
   };
 
-  const handleConfirmSubmit = () => {
-    console.log("Final Answers Submitted to FHIR:", answers);
-    setShowConfirmDialog(false);
-    setIsOpen(false);
-    // Here you would typically call an API to update the FHIR patient data
+  const handleConfirmSubmit = async () => {
+    setIsSubmitting(true); // Start loading state
+    setSubmissionError(null); // Clear any previous errors 
+    const accessToken = sessionStorage.getItem("access_token") || "";
+    const patientId = sessionStorage.getItem("patientId") || "";
+
+    if (!accessToken || !patientId) {
+      setSubmissionError("Missing authentication token or patient ID.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    const questionnaireResponse = {
+      resourceType: "QuestionnaireResponse",
+      identifier: {
+        system: "http://limogi.ai",
+        value: `answer-${Date.now()}`,
+      },
+      questionnaire:
+      QUESTIONNAIRE_URL,
+      status: "completed",
+      subject: {
+        reference: `Patient/${patientId}`,
+      },
+      authored: new Date().toISOString(),
+      item: questions.map((section) => ({
+        linkId: section.section.toLowerCase().replace(/\s+/g, "-"),
+        item: section.questions.map((question) => ({
+          linkId: question.id,
+          answer: answers[question.id]
+            ? [{ valueString: answers[question.id] }]
+            : undefined,
+        })).filter((item) => item.answer),
+      })),
+    };
+
+    try {
+      const response = await fetch(
+        QUESTIONNAIRE_RESPONSE_URL,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify(questionnaireResponse),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(
+          errorData?.issue?.[0]?.diagnostics || "Failed to submit questionnaire"
+        );
+      }
+
+      const result = await response.json();
+      console.log("QuestionnaireResponse submitted successfully:", result);
+
+      // Show success toast
+      toast({
+        title: "Submission Successful",
+        description: "Please Refresh the Dashbaord for AI Analysis Result",
+        variant: "success",
+      });
+
+      setShowConfirmDialog(false);
+      setIsOpen(false);
+    } catch (error) {
+      console.error("Error submitting to FHIR:", error);
+      setSubmissionError(
+        error instanceof Error ? error.message : "An unknown error occurred"
+      );
+    } finally {
+      setIsSubmitting(false); // End loading state
+    }
   };
 
   const handleCancelSubmit = () => {
     setShowConfirmDialog(false);
+    setSubmissionError(null);
   };
 
   const renderReviewSummary = () => (
@@ -298,6 +386,16 @@ const RomeIVQuestionnaire: React.FC<RomeIVQuestionnaireProps> = ({
               {isReviewing ? renderReviewSummary() : renderQuestion()}
             </div>
 
+            {submissionError && (
+              <div
+                className={`text-red-500 p-2 rounded ${
+                  isDarkMode ? "bg-red-900" : "bg-red-100"
+                }`}
+              >
+                {submissionError}
+              </div>
+            )}
+
             <div className="sticky bottom-0 bg-inherit pt-4">
               <DialogFooter className="flex justify-between">
                 <Button
@@ -357,18 +455,27 @@ const RomeIVQuestionnaire: React.FC<RomeIVQuestionnaireProps> = ({
               variant="outline"
               onClick={handleCancelSubmit}
               className={isDarkMode ? "text-gray-300" : "text-gray-600"}
+              disabled={isSubmitting}
             >
               Cancel
             </Button>
             <Button
               onClick={handleConfirmSubmit}
-              className={`${
+              className={`flex items-center gap-2 ${
                 isDarkMode
                   ? "bg-blue-600 hover:bg-blue-700"
                   : "bg-blue-500 hover:bg-blue-600"
               }`}
+              disabled={isSubmitting}
             >
-              Confirm
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Submitting
+                </>
+              ) : (
+                "Confirm"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

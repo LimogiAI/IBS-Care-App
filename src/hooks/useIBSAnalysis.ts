@@ -3,15 +3,12 @@ import { useState, useEffect, useCallback } from 'react';
 import debounce from 'lodash/debounce';
 import { IBSAssessment, ProcessedFHIRData } from '../types/ibs';
 
-
-
 export function useIBSAnalysis(processedFHIRData: ProcessedFHIRData | null) {
   const [analysis, setAnalysis] = useState<IBSAssessment | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   // Debounced fetch function
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const fetchAnalysis = useCallback(
     debounce(async (fhirData: ProcessedFHIRData) => {
       setLoading(true);
@@ -39,6 +36,7 @@ export function useIBSAnalysis(processedFHIRData: ProcessedFHIRData | null) {
       } catch (err: unknown) {
         console.error('IBS Analysis Error:', err);
         setError('Failed to load IBS analysis.');
+        setAnalysis(null);
       } finally {
         setLoading(false);
       }
@@ -47,13 +45,10 @@ export function useIBSAnalysis(processedFHIRData: ProcessedFHIRData | null) {
   );
 
   useEffect(() => {
-    // Only fetch if processedFHIRData is fully populated
-    if (
-      !processedFHIRData ||
-      !processedFHIRData.patient.id ||
-      !processedFHIRData.relevantConditions ||
-      !processedFHIRData.relevantObservations
-    ) {
+    // Only fetch if processedFHIRData is fully populated with at least patient ID
+    if (!processedFHIRData || !processedFHIRData.patient.id) {
+      setAnalysis(null);
+      setLoading(false);
       return;
     }
 
@@ -62,5 +57,3 @@ export function useIBSAnalysis(processedFHIRData: ProcessedFHIRData | null) {
 
   return { analysis, loading, error };
 }
-
-
