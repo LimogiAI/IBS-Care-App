@@ -1,4 +1,3 @@
-
 // export default RomeIVQuestionnaire;
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button/button";
@@ -26,12 +25,26 @@ import { useToast } from "@/components/ui/toast";
 interface RomeIVQuestionnaireProps {
   isDarkMode: boolean;
 }
+let QUESTIONNAIRE_RESPONSE_URL = "";
+// Get workspace slug from session storage
+const wsSlug = sessionStorage.getItem("ws-slug");
 
-const QUESTIONNAIRE_URL = import.meta.env.QUESTIONNAIRE_URL || 'https://app.meldrx.com/api/fhir/3eb16078-78c9-4b9f-9974-ea89dbb34c71/Questionnaire/fe7cb8b0-b68d-4b86-b624-6cb83cd0d429'
+if (wsSlug) {
+  console.warn(
+    "Workspace slug not found in session storage, falling back to env variable"
+  );
+  QUESTIONNAIRE_RESPONSE_URL = `${
+    import.meta.env.VITE_FHIR_BASE_URL
+  }/wsSlug/QuestionnaireResponse`;
+} else {
+  QUESTIONNAIRE_RESPONSE_URL =
+    import.meta.env.QUESTIONNAIRE_RESPONSE_URL ||
+    "https://app.meldrx.com/api/fhir/3eb16078-78c9-4b9f-9974-ea89dbb34c71/QuestionnaireResponse/";
+}
 
-const QUESTIONNAIRE_RESPONSE_URL = import.meta.env.QUESTIONNAIRE_RESPONSE_URL || 'https://app.meldrx.com/api/fhir/3eb16078-78c9-4b9f-9974-ea89dbb34c71/QuestionnaireResponse/'
-
-
+const QUESTIONNAIRE_URL =
+  import.meta.env.QUESTIONNAIRE_URL ||
+  "https://app.meldrx.com/api/fhir/3eb16078-78c9-4b9f-9974-ea89dbb34c71/Questionnaire/fe7cb8b0-b68d-4b86-b624-6cb83cd0d429";
 
 const RomeIVQuestionnaire: React.FC<RomeIVQuestionnaireProps> = ({
   isDarkMode,
@@ -112,7 +125,7 @@ const RomeIVQuestionnaire: React.FC<RomeIVQuestionnaireProps> = ({
 
   const handleConfirmSubmit = async () => {
     setIsSubmitting(true); // Start loading state
-    setSubmissionError(null); // Clear any previous errors 
+    setSubmissionError(null); // Clear any previous errors
     const accessToken = sessionStorage.getItem("access_token") || "";
     const patientId = sessionStorage.getItem("patientId") || "";
 
@@ -128,8 +141,7 @@ const RomeIVQuestionnaire: React.FC<RomeIVQuestionnaireProps> = ({
         system: "http://limogi.ai",
         value: `answer-${Date.now()}`,
       },
-      questionnaire:
-      QUESTIONNAIRE_URL,
+      questionnaire: QUESTIONNAIRE_URL,
       status: "completed",
       subject: {
         reference: `Patient/${patientId}`,
@@ -137,27 +149,26 @@ const RomeIVQuestionnaire: React.FC<RomeIVQuestionnaireProps> = ({
       authored: new Date().toISOString(),
       item: questions.map((section) => ({
         linkId: section.section.toLowerCase().replace(/\s+/g, "-"),
-        item: section.questions.map((question) => ({
-          linkId: question.id,
-          answer: answers[question.id]
-            ? [{ valueString: answers[question.id] }]
-            : undefined,
-        })).filter((item) => item.answer),
+        item: section.questions
+          .map((question) => ({
+            linkId: question.id,
+            answer: answers[question.id]
+              ? [{ valueString: answers[question.id] }]
+              : undefined,
+          }))
+          .filter((item) => item.answer),
       })),
     };
 
     try {
-      const response = await fetch(
-        QUESTIONNAIRE_RESPONSE_URL,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify(questionnaireResponse),
-        }
-      );
+      const response = await fetch(QUESTIONNAIRE_RESPONSE_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify(questionnaireResponse),
+      });
 
       if (!response.ok) {
         const errorData = await response.json();

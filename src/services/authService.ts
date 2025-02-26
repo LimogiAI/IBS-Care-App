@@ -46,6 +46,7 @@ export const handleCallback = async (): Promise<{ user: User | null; patientId: 
   if (window.location.pathname === "/callback") {
     console.log("Processing callback...", window.location);
     try {
+      console.log(window.location, "window.location");
       const result = await oidcClient.processSigninResponse(window.location.href);
       console.log("OIDC Auth Result:", result);
 
