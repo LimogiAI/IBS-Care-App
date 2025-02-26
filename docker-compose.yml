@@ -1,8 +1,7 @@
 services:
   ibs-care-app:
-    image: ghcr.io/limogiai/ibs-care-app:latest
+    build: .
     ports:
-      - "4434:80"  # Map NGINX's default port 80 to 4434
+      - "4434:4434"
     env_file:
       - .env
-    restart: unless-stopped
