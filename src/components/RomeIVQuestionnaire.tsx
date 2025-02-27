@@ -25,21 +25,20 @@ import { useToast } from "@/components/ui/toast";
 interface RomeIVQuestionnaireProps {
   isDarkMode: boolean;
 }
+
 let QUESTIONNAIRE_RESPONSE_URL = "";
 // Get workspace slug from session storage
 const wsSlug = sessionStorage.getItem("ws-slug");
 
-if (wsSlug) {
+if (!wsSlug) {
   console.warn(
     "Workspace slug not found in session storage, falling back to env variable"
   );
-  QUESTIONNAIRE_RESPONSE_URL = `${
-    import.meta.env.VITE_FHIR_BASE_URL
-  }/wsSlug/QuestionnaireResponse`;
-} else {
   QUESTIONNAIRE_RESPONSE_URL =
     import.meta.env.QUESTIONNAIRE_RESPONSE_URL ||
-    "https://app.meldrx.com/api/fhir/3eb16078-78c9-4b9f-9974-ea89dbb34c71/QuestionnaireResponse/";
+    "https://app.meldrx.com/api/fhir/3eb16078-78c9-4b9f-9974-ea89dbb34c71/QuestionnaireResponse";
+} else {
+  QUESTIONNAIRE_RESPONSE_URL = `${import.meta.env.VITE_FHIR_BASE_URL}/${wsSlug}/QuestionnaireResponse`;
 }
 
 const QUESTIONNAIRE_URL =
